@@ -1,0 +1,144 @@
+spring:
+  application:
+    name: learnWithMe
+  profiles:
+    default: local
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/learnwithme}
+    username: ${DB_USER:learnwithme}
+    password: ${DB_PASSWORD:learnwithme}
+
+  jpa:
+    open-in-view: false        # Lazy Loading im Controller ist eine Fehlerquelle, nicht ein Feature
+    hibernate:
+      ddl-auto: validate       # Schema kommt ausschließlich von Flyway (§8.3)
+    properties:
+      hibernate:
+        jdbc.batch_size: 50
+        order_inserts: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 100MB     # B1
+      max-request-size: 110MB
+
+  # ── KI (ADR-004/ADR-010) ────────────────────────────────────────────────────
+  # Diese Werte sind nur die Plattform-Defaults. Pro Workspace können sie durch
+  # BYOK-Credentials und ein eigenes Routing überschrieben werden (§13).
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+
+server:
+  port: 8080
+  error:
+    include-message: never     # keine internen Details an Clients
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,modulith
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: ${TRACE_SAMPLING:1.0}
+
+springdoc:
+  swagger-ui:
+    path: /api-docs
+
+# ── Anwendungseigene Konfiguration ────────────────────────────────────────────
+learnwithme:
+  storage:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    bucket: ${S3_BUCKET:learnwithme}
+    access-key: ${S3_ACCESS_KEY:learnwithme}
+    secret-key: ${S3_SECRET_KEY:learnwithme}
+
+  ingestion:
+    max-pages: 1000
+    chunk-target-tokens: 512
+    chunk-overlap-tokens: 64
+    ocr-text-density-threshold: 100   # Zeichen/Seite, darunter → needsOcr (B5)
+
+  # Modell-Routing nach Task-Klasse (ADR-010). Bewusst Konfiguration, nicht Code.
+  ai-routing:
+    concept-extraction: { provider: openai, model: gpt-4o-mini }
+    embedding:          { provider: openai, model: text-embedding-3-small, dimensions: 1536 }
+    item-generation:    { provider: openai, model: gpt-4o }
+    groundedness-judge: { provider: openai, model: gpt-4o-mini }
+    free-text-grading:  { provider: openai, model: gpt-4o }
+    error-analysis:     { provider: openai, model: gpt-4o-mini }
+
+  # Adaptive Engine (§11). Alle Werte sind Tuning-Kandidaten — der Simulator
+  # aus §17.5 dient dazu, sie zu bestimmen, nicht das Bauchgefühl.
+  adaptivity:
+    target-success-probability: 0.78   # Zielband 0.70–0.85
+    elo:
+      user-k-a: 0.6
+      user-k-b: 0.05
+      item-k-a: 0.8
+      item-k-b: 0.10
+    fsrs:
+      target-retention: 0.90
+    selection:
+      softmax-temperature: 0.3
+      recent-item-window: 10
+      max-same-type-in-a-row: 2
+
+  quality:
+    groundedness-similarity-threshold: 0.75
+    duplicate-similarity-threshold: 0.93
+    max-option-length-variance-ratio: 2.0
+
+  limits:
+    free-monthly-cost-micros: 2000000   # 2 € Plattform-Budget pro Monat (A6)
+
+logging:
+  level:
+    de.optadata.odil.learnwithme: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  docker:
+    compose:
+      enabled: true
+      file: compose.yaml
+
+---
+spring:
+  config:
+    activate:
+      on-profile: worker
+# Worker-Profil (§6.2): gleiches Artefakt, keine öffentlichen Endpunkte.
+server:
+  port: 8081
+learnwithme:
+  jobs:
+    enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: api
+learnwithme:
+  jobs:
+    enabled: false

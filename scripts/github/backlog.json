@@ -1,0 +1,1058 @@
+{
+  "meta": {
+    "project": "LearnWithMe",
+    "planRef": "docs/PLAN.md",
+    "language": "de",
+    "note": "Einzige Quelle der Wahrheit für das GitHub-Backlog. Änderungen hier, dann seed_github.py erneut laufen lassen (idempotent)."
+  },
+
+  "labels": [
+    { "name": "type:epic",      "color": "5319E7", "description": "Übergeordnetes Epic mit Sub-Issues" },
+    { "name": "type:story",     "color": "0E8A16", "description": "User Story mit Akzeptanzkriterien" },
+    { "name": "type:spike",     "color": "FBCA04", "description": "Zeitlich begrenzte Untersuchung, Ergebnis ist eine Entscheidung" },
+    { "name": "type:chore",     "color": "C5DEF5", "description": "Infrastruktur, Build, Aufräumarbeit" },
+    { "name": "type:bug",       "color": "D73A4A", "description": "Fehlverhalten" },
+
+    { "name": "prio:must",      "color": "B60205", "description": "MoSCoW: MVP-kritisch" },
+    { "name": "prio:should",    "color": "D93F0B", "description": "MoSCoW: v1.0" },
+    { "name": "prio:could",     "color": "FEF2C0", "description": "MoSCoW: v1.x" },
+
+    { "name": "epic:identity",  "color": "1D76DB", "description": "Epic A — Identität, Konto & Abrechnung" },
+    { "name": "epic:ingestion", "color": "1D76DB", "description": "Epic B — Dokumenten-Import & Ingestion" },
+    { "name": "epic:authoring", "color": "1D76DB", "description": "Epic C — Fragegenerierung & Qualität" },
+    { "name": "epic:adaptivity","color": "1D76DB", "description": "Epic D — Adaptives Frage-Antwort-System" },
+    { "name": "epic:analysis",  "color": "1D76DB", "description": "Epic E — Echtzeit-Fehlerkorrektur & Analyse" },
+    { "name": "epic:clients",   "color": "1D76DB", "description": "Epic F — Clients: Web & Extension" },
+    { "name": "epic:platform",  "color": "1D76DB", "description": "Epic G — Plattform, Qualität & Betrieb" },
+
+    { "name": "area:backend",   "color": "BFD4F2", "description": "Kotlin/Spring Backend" },
+    { "name": "area:frontend",  "color": "BFD4F2", "description": "Web-App (React/TS)" },
+    { "name": "area:extension", "color": "BFD4F2", "description": "Chrome-Extension (MV3)" },
+    { "name": "area:ai",        "color": "BFD4F2", "description": "LLM-Pipeline, Prompts, Gates" },
+    { "name": "area:db",        "color": "BFD4F2", "description": "Schema, Migrationen, Vektorsuche" },
+    { "name": "area:infra",     "color": "BFD4F2", "description": "CI/CD, Deployment, Betrieb" },
+    { "name": "area:security",  "color": "BFD4F2", "description": "Sicherheit, Datenschutz, Compliance" },
+    { "name": "area:docs",      "color": "BFD4F2", "description": "Dokumentation" },
+
+    { "name": "risk:high",      "color": "E99695", "description": "Erhöhtes Risiko — siehe PLAN.md §19" },
+    { "name": "needs-decision", "color": "FBCA04", "description": "Blockiert durch eine offene Entscheidung (PLAN.md §20)" },
+    { "name": "good-first-issue","color": "7057FF","description": "Guter Einstiegspunkt" }
+  ],
+
+  "milestones": [
+    { "title": "M0 — Walking Skeleton",        "due_on": "2026-08-13", "description": "Gradle+Modulith-Grundgerüst, Postgres+pgvector, Flyway, OIDC-Login, CI. DoD: Text hochladen → chunken → embedden → über die API lesbar. Deployed und mit Trace." },
+    { "title": "M1 — Ingestion",               "due_on": "2026-09-03", "description": "Job-Infrastruktur, PDF/URL-Import, Struktur- und Konzeptextraktion, ai-Modul mit Gateway/Routing/BYOK. DoD: 100-Seiten-PDF → Konzeptliste mit Belegstellen in <3 min, Kosten gemessen." },
+    { "title": "M2 — Generierung + Gates",     "due_on": "2026-09-24", "description": "Item-Generierung für 5 Typen, alle 4 Qualitätstore, Item-Bank, Eval-Harness. DoD: faktische Fehlerrate am Gold-Set ≤5%. HÖCHSTES RISIKO — großzügig planen." },
+    { "title": "M3 — Adaptive Loop",           "due_on": "2026-10-15", "description": "Session, Grading, Elo, FSRS, Selection Policy, Feedback mit Beleg, Simulator. DoD: POST /attempts p95 <400ms, θ-Konvergenz nachgewiesen." },
+    { "title": "M4 — Clients",                 "due_on": "2026-11-12", "description": "Web-App und Chrome-Extension gegen dieselbe API, generierter TS-Client, Barrierefreiheit. DoD: Extension besteht internes Store-Policy-Review." },
+    { "title": "M5 — Härtung & Beta",          "due_on": "2026-12-10", "description": "Sicherheitssuite, RLS, Quota, Lasttest, Backup-Probe, Onboarding, A/B-Rahmen. DoD: alle NFRs aus §4.3 gemessen und erfüllt, 20 Beta-Nutzer." },
+    { "title": "M6 — v1.0",                    "due_on": "2027-01-14", "description": "Restliche Fragetypen, Freitext mit Rubric, Wochenreport, Dozenten-Review, Export (QTI/Anki), Mehrsprachigkeit." }
+  ],
+
+  "project": {
+    "title": "LearnWithMe — Delivery",
+    "shortDescription": "Backlog nach docs/PLAN.md — Epics A–G, M0–M6",
+    "fields": [
+      { "name": "Status",     "dataType": "SINGLE_SELECT", "options": ["Backlog", "Ready", "In Progress", "In Review", "Blocked", "Done"] },
+      { "name": "Priorität",  "dataType": "SINGLE_SELECT", "options": ["Must", "Should", "Could"] },
+      { "name": "Epic",       "dataType": "SINGLE_SELECT", "options": ["A Identity", "B Ingestion", "C Authoring", "D Adaptivity", "E Analysis", "F Clients", "G Platform"] },
+      { "name": "Schätzung",  "dataType": "NUMBER" }
+    ],
+    "defaults": { "Status": "Backlog" }
+  },
+
+  "epics": [
+    {
+      "key": "A",
+      "title": "Epic A — Identität, Konto & Abrechnung",
+      "label": "epic:identity",
+      "projectEpic": "A Identity",
+      "milestone": "M1 — Ingestion",
+      "planRef": "§4.2 Epic A, §13",
+      "goal": "Nutzer können sich anmelden, ihren eigenen AI-Account hinterlegen, ihren Verbrauch sehen und ihr Konto vollständig löschen.",
+      "outcome": "Ein Nutzer kann das Produkt ohne unsere LLM-Kosten betreiben (BYOK) und behält jederzeit Kontrolle über seine Daten und Credentials.",
+      "stories": [
+        {
+          "key": "A1", "title": "Registrierung und Login per E-Mail oder SSO",
+          "priority": "must", "milestone": "M0 — Walking Skeleton", "points": 5,
+          "labels": ["area:backend", "area:security"],
+          "story": "Als Nutzer möchte ich mich per E-Mail oder Google/GitHub-SSO registrieren und anmelden, damit ich ohne Hürde starten kann.",
+          "ac": [
+            "Erfolgreicher OIDC-Flow legt einen User und einen Default-Workspace an",
+            "Access Token gültig 15 min, Refresh Token 30 Tage",
+            "Wiederholter Login mit derselben E-Mail führt nicht zu einem zweiten Konto",
+            "Abgelaufenes Token liefert 401 mit problem+json, kein Stacktrace"
+          ],
+          "notes": [
+            "Spring Security OAuth2 Resource Server; IdP-Wahl ist Teil von G1",
+            "Workspace ist die Mandantengrenze (§8.2) — er muss beim ersten Login existieren"
+          ]
+        },
+        {
+          "key": "A2", "title": "Anmeldung aus der Chrome-Extension ohne erneute Passworteingabe",
+          "priority": "must", "milestone": "M4 — Clients", "points": 5,
+          "labels": ["area:extension", "area:security"],
+          "story": "Als Nutzer möchte ich mich in der Extension anmelden, ohne mein Passwort erneut einzugeben, damit der Einstieg beim Lesen nicht unterbrochen wird.",
+          "ac": [
+            "chrome.identity.launchWebAuthFlow mit Authorization Code + PKCE",
+            "Eine bestehende Web-Session wird wiederverwendet (kein zweiter Login)",
+            "Access Token liegt ausschließlich im Speicher des Service Workers",
+            "Refresh Token liegt in chrome.storage.session, niemals in storage.local",
+            "Der Auth-Flow wird ausschließlich durch eine sichtbare Nutzeraktion ausgelöst"
+          ],
+          "notes": [
+            "MV3-Service-Worker können jederzeit beendet werden — der Refresh-Pfad muss beim ersten API-Call rekonstruierbar und idempotent sein",
+            "PLAN.md §14.2"
+          ]
+        },
+        {
+          "key": "A3", "title": "Eigenen AI-Account / API-Key hinterlegen (BYOK)",
+          "priority": "must", "milestone": "M1 — Ingestion", "points": 8,
+          "labels": ["area:backend", "area:security", "area:ai", "risk:high"],
+          "story": "Als Nutzer möchte ich meinen eigenen AI-Account bzw. API-Key hinterlegen, damit ich Kosten, Modellwahl und Datenfluss selbst kontrolliere.",
+          "ac": [
+            "Key wird per Envelope Encryption gespeichert: DEK (AES-256-GCM) + KMS-gewrappter DEK",
+            "Kein API-Endpunkt gibt den Klartext jemals zurück — nur provider, keyHint (letzte 4 Zeichen), region, lastVerifiedAt",
+            "POST /ai/credentials/{id}/verify führt einen echten Testcall aus und setzt den Status",
+            "Der Credential-Typ ist so gebaut, dass toString() maskiert und kein Logger ihn im Klartext ausgeben kann",
+            "Löschen eines Credentials ist sofort wirksam, laufende Jobs schlagen kontrolliert fehl"
+          ],
+          "notes": [
+            "ADR-009. Die Speicherung fremder Credentials in der App-DB ohne externes KMS gilt als Anti-Pattern",
+            "Lokale Entwicklung braucht einen Dev-KEK-Pfad ohne echtes KMS",
+            "Abhängig von Spike O-4 (Provider-ToS für Endnutzer-Keys)"
+          ]
+        },
+        {
+          "key": "A4", "title": "Token- und Kostenverbrauch pro Dokument und Monat einsehen",
+          "priority": "should", "milestone": "M1 — Ingestion", "points": 3,
+          "labels": ["area:backend", "area:frontend"],
+          "story": "Als Nutzer möchte ich sehen, wie viele Tokens und welche Kosten ich verursache, damit ich BYOK bewusst steuern kann.",
+          "ac": [
+            "Dashboard zeigt Input-/Output-/Cached-Tokens und geschätzte Kosten je Zeitraum",
+            "Top-5-Kostentreiber (Dokumente) werden ausgewiesen",
+            "Kosten werden als Mikro-Euro in BIGINT geführt, niemals als Float",
+            "Vor dem Start eines Imports wird eine Kostenschätzung angezeigt"
+          ],
+          "notes": ["Tabelle llm_usage aus §8.1; Kostenformel aus §16.2"]
+        },
+        {
+          "key": "A5", "title": "Konto vollständig löschen",
+          "priority": "must", "milestone": "M5 — Härtung & Beta", "points": 5,
+          "labels": ["area:backend", "area:security", "area:db"],
+          "story": "Als Nutzer möchte ich mein Konto vollständig löschen, damit keine Reste meiner Dokumente zurückbleiben.",
+          "ac": [
+            "Innerhalb von 24 h sind alle Dokumente, Chunks, Embeddings, Concepts, Items, Attempts und Credentials gelöscht",
+            "S3-Objekte werden mitgelöscht",
+            "Ein Audit-Log-Eintrag mit Zeitstempel dokumentiert die Löschung",
+            "Ein automatisierter Test prüft, dass keine Tabelle verwaiste Zeilen behält"
+          ],
+          "notes": ["DSGVO Art. 17; Kaskaden sind im Schema §8.1 bereits angelegt"]
+        },
+        {
+          "key": "A6", "title": "Gratis-Kontingent ohne eigenen Key nutzen",
+          "priority": "should", "milestone": "M5 — Härtung & Beta", "points": 5,
+          "labels": ["area:backend"],
+          "story": "Als neuer Nutzer möchte ich das Produkt ohne eigenen API-Key ausprobieren, damit ich vor der Einrichtung sehen kann, ob es mir hilft.",
+          "ac": [
+            "Plattform-Key mit hartem Monatslimit pro Workspace (Konfiguration learnwithme.limits)",
+            "Bei Erreichen des Limits: klare Meldung mit Upgrade- und BYOK-Option, kein stiller Fehler",
+            "Laufende Jobs pausieren statt abzubrechen",
+            "Ein Kosten-Circuit-Breaker greift, bevor das Budget überschritten wird"
+          ],
+          "notes": ["Hängt an G6 (Kostenerfassung + Circuit Breaker)"]
+        }
+      ]
+    },
+
+    {
+      "key": "B",
+      "title": "Epic B — Dokumenten-Import & Ingestion",
+      "label": "epic:ingestion",
+      "projectEpic": "B Ingestion",
+      "milestone": "M1 — Ingestion",
+      "planRef": "§4.2 Epic B, §6.4",
+      "goal": "Aus PDF, DOCX, Webseite oder markiertem Text wird strukturierter, belegbarer Text mit Konzeptliste.",
+      "outcome": "Ein 100-Seiten-Skript ist in unter drei Minuten als Konzeptliste mit Belegstellen verfügbar; die erste Frage ist nach 60 s nutzbar.",
+      "stories": [
+        {
+          "key": "B1", "title": "PDF hochladen (bis 100 MB / 1000 Seiten)",
+          "priority": "must", "milestone": "M1 — Ingestion", "points": 8,
+          "labels": ["area:backend", "risk:high"],
+          "story": "Als Nutzer möchte ich ein PDF hochladen, damit daraus Lernfragen entstehen.",
+          "ac": [
+            "Upload liefert sofort 202 mit sourceId, kein blockierender Request",
+            "Statusfolge UPLOADED → EXTRACTING → CHUNKING → INDEXING → READY | PARTIAL | FAILED",
+            "Fortschritt ist über GET /sources/{id}/events als SSE abrufbar",
+            "Ein fehlgeschlagener Import nennt einen verständlichen Grund, nicht nur FAILED",
+            "Extraktion läuft mit Zeit- und Speicherbudget; ein defektes PDF reißt die Anwendung nicht mit"
+          ],
+          "notes": [
+            "Apache Tika (nutzt PDFBox intern) — deckt zugleich DOCX/EPUB ab",
+            "Risiko R4: echte Vorlesungsskripte sind der harte Test, nicht saubere Beispiel-PDFs",
+            "XXE in allen Parsern deaktivieren (§15.1)"
+          ]
+        },
+        {
+          "key": "B2", "title": "Webseite per URL importieren",
+          "priority": "must", "milestone": "M1 — Ingestion", "points": 5,
+          "labels": ["area:backend", "area:security"],
+          "story": "Als Nutzer möchte ich eine URL angeben, damit ich Online-Artikel und Dokumentation lernen kann.",
+          "ac": [
+            "Extraktion mit Readability4J (jsoup-basiert) liefert den Artikeltext ohne Navigation und Werbung",
+            "Paywall oder reines JS-Rendering wird erkannt und als PARTIAL markiert, statt Müll zu speichern",
+            "SSRF-Schutz: nur http/https, private IP-Bereiche blockiert, Redirect-Limit, Timeout, Größenlimit",
+            "Die Quell-URL wird für die Belegstelle mitgespeichert"
+          ],
+          "notes": ["Readability4J erzeugt dasselbe Ergebnis wie Firefox' Reader View — konsistent zum Extension-Pfad (B3)"]
+        },
+        {
+          "key": "B3", "title": "Aktuelle Seite aus der Extension importieren",
+          "priority": "must", "milestone": "M4 — Clients", "points": 5,
+          "labels": ["area:extension", "area:backend"],
+          "story": "Als Nutzer möchte ich die gerade gelesene Seite direkt aus der Extension importieren, damit ich den Kontext nicht verlasse.",
+          "ac": [
+            "Der Content Script extrahiert das Artikel-DOM lokal und sendet den Text, nicht die URL",
+            "Funktioniert dadurch auch hinter Logins und Paywalls, die der Nutzer legitim geöffnet hat",
+            "Der Server führt keinen eigenen Fetch für diesen Pfad aus",
+            "Quelle wird als kind=HTML_SNIPPET mit Original-URL als Metadatum gespeichert"
+          ],
+          "notes": ["PLAN.md §14.3 — bewusste Datenschutz-Entscheidung, nicht nur eine Optimierung"]
+        },
+        {
+          "key": "B4", "title": "DOCX, Markdown, Plaintext und EPUB importieren",
+          "priority": "should", "milestone": "M1 — Ingestion", "points": 3,
+          "labels": ["area:backend"],
+          "story": "Als Nutzer möchte ich weitere Dateiformate importieren, damit ich nicht erst konvertieren muss.",
+          "ac": [
+            "Alle Formate laufen durch dieselbe Pipeline wie PDF",
+            "Format wird per Content-Sniffing erkannt, nicht per Dateiendung",
+            "Nicht unterstützte Formate liefern eine klare Fehlermeldung mit Formatliste"
+          ],
+          "notes": ["Tika deckt das ab — Aufwand liegt in Tests, nicht in der Implementierung"]
+        },
+        {
+          "key": "B5", "title": "Gescanntes PDF erkennen und OCR anbieten",
+          "priority": "should", "milestone": "M2 — Generierung + Gates", "points": 8,
+          "labels": ["area:backend"],
+          "story": "Als Nutzer möchte ich bei einem gescannten PDF eine OCR-Option bekommen, damit auch abfotografierte Skripte nutzbar sind.",
+          "ac": [
+            "Textdichte unter Schwellwert (Zeichen pro Seite) setzt needsOcr=true",
+            "OCR ist opt-in; Dauer und Kosten werden vorher angezeigt",
+            "Nach OCR läuft die normale Pipeline weiter",
+            "Die Quelle wird als OCR-basiert markiert, damit Qualitätsprobleme zuordenbar bleiben"
+          ],
+          "notes": ["OCR-Engine ist noch offen — Tesseract oder ein externer Dienst. Kostenrelevant."]
+        },
+        {
+          "key": "B6", "title": "Dokumentstruktur anzeigen und Bereiche ausschließen",
+          "priority": "should", "milestone": "M2 — Generierung + Gates", "points": 5,
+          "labels": ["area:backend", "area:frontend"],
+          "story": "Als Nutzer möchte ich Kapitel ausschließen können, damit aus Literaturverzeichnis und Anhang keine sinnlosen Fragen entstehen.",
+          "ac": [
+            "Erkannte Struktur wird als Baum angezeigt",
+            "Ausgeschlossene Sections erzeugen keine Concepts und keine Items",
+            "Nachträgliches Ausschließen zieht bereits erzeugte Items aus der Rotation"
+          ],
+          "notes": ["Spart direkt LLM-Kosten (§16.2) und verbessert die Fragenqualität"]
+        },
+        {
+          "key": "B7", "title": "Identische Uploads deduplizieren",
+          "priority": "should", "milestone": "M1 — Ingestion", "points": 2,
+          "labels": ["area:backend", "area:db"],
+          "story": "Als System möchte ich identische Dateien erkennen, damit derselbe Inhalt nicht zweimal verarbeitet und bezahlt wird.",
+          "ac": [
+            "SHA-256 über die Rohdatei, Unique Constraint auf (workspace_id, content_hash)",
+            "Erneuter Upload derselben Datei liefert die bestehende Source statt neuer Verarbeitung",
+            "Der Nutzer wird darauf hingewiesen, statt stillschweigend umgeleitet zu werden"
+          ]
+        },
+        {
+          "key": "B8", "title": "Kernkonzepte des Dokuments extrahieren und anzeigen",
+          "priority": "must", "milestone": "M1 — Ingestion", "points": 8,
+          "labels": ["area:backend", "area:ai"],
+          "story": "Als Nutzer möchte ich die erkannten Kernkonzepte sehen, damit ich verstehe, was das System aus meinem Material gemacht hat.",
+          "ac": [
+            "Jedes Concept hat mindestens eine Belegstelle (Chunk-Referenz)",
+            "Concepts werden gegen bestehende dedupliziert (Embedding-Ähnlichkeit > 0.90 → mergen)",
+            "Name und Wichtigkeit sind manuell editierbar",
+            "Der Prerequisite-Graph ist azyklisch (wird beim Schreiben geprüft)"
+          ],
+          "notes": [
+            "Concept ist die zentrale Achse des Datenmodells (§5.2) — Fähigkeit, Gedächtnis und Fehler hängen daran",
+            "Läuft auf dem günstigen Modell (ADR-010)"
+          ]
+        }
+      ]
+    },
+
+    {
+      "key": "C",
+      "title": "Epic C — Fragegenerierung & Qualität",
+      "label": "epic:authoring",
+      "projectEpic": "C Authoring",
+      "milestone": "M2 — Generierung + Gates",
+      "planRef": "§4.2 Epic C, §12",
+      "goal": "Aus Concepts entstehen vielfältige, faktisch korrekte und belegte Fragen — durch eine Pipeline mit Qualitätstoren, nicht durch einen einzelnen Prompt.",
+      "outcome": "Von 100 ausgelieferten Items sind höchstens 5 faktisch falsch (N6), die Nutzer-Report-Rate liegt unter 3 % (N7).",
+      "risk": "Dies ist das größte Produktrisiko (R1). Wenn die Fragenqualität hier nicht stimmt, ist alles danach wertlos.",
+      "stories": [
+        {
+          "key": "C1", "title": "Fragen verschiedener Typen je Concept generieren",
+          "priority": "must", "milestone": "M2 — Generierung + Gates", "points": 13,
+          "labels": ["area:ai", "area:backend", "risk:high"],
+          "story": "Als System möchte ich zu jedem Concept Fragen in verschiedenen Typen erzeugen, damit Lernende Transfer üben statt Formulierungen auswendig zu lernen.",
+          "ac": [
+            "Mindestens 5 Typen: MC_SINGLE, MC_MULTI, TRUE_FALSE, ORDERING, MATCHING",
+            "Typverteilung ist konfigurierbar",
+            "Jede Frage trägt einen sourceSpan (chunkId + Zeichenoffsets)",
+            "Structured Output über JSON Schema, kein Freitext-Parsing",
+            "Nur Concept + zugehörige Chunks im Prompt, niemals das ganze Dokument"
+          ],
+          "notes": [
+            "Prompts sind versioniert (prompts/item_generation/vN.md), Version landet in items.generated_by",
+            "Ohne Versionierung ist Qualitätsregression später nicht auffindbar"
+          ]
+        },
+        {
+          "key": "C2", "title": "Gate: nicht durch den Quelltext gedeckte Fragen verwerfen",
+          "priority": "must", "milestone": "M2 — Generierung + Gates", "points": 8,
+          "labels": ["area:ai", "risk:high"],
+          "story": "Als System möchte ich ungedeckte Fragen verwerfen, damit keine halluzinierten Fakten beim Lernenden ankommen.",
+          "ac": [
+            "LLM-Judge bekommt ausschließlich den zitierten Chunk als Kontext, nicht das Dokument",
+            "Zusätzlich Embedding-Ähnlichkeit zwischen Item und Chunk über Schwelle (Default 0.75)",
+            "Durchgefallene Items erhalten status=REJECTED und erreichen den Nutzer nie",
+            "Das Gate-Ergebnis wird in items.quality festgehalten und ist auswertbar"
+          ],
+          "notes": [
+            "ADR-008. Der Judge läuft auf dem günstigen Modell und nur auf Kandidaten, die die deterministischen Gates bestanden haben",
+            "Das Zitat ist gleichzeitig Produktfeature (D4)"
+          ]
+        },
+        {
+          "key": "C3", "title": "Gate: strukturell defekte Fragen verwerfen",
+          "priority": "must", "milestone": "M2 — Generierung + Gates", "points": 5,
+          "labels": ["area:backend"],
+          "story": "Als System möchte ich strukturelle Defekte deterministisch abfangen, damit kein LLM-Aufruf für offensichtlich kaputte Items verschwendet wird.",
+          "ac": [
+            "MC_SINGLE hat genau eine korrekte Option",
+            "Keine doppelten Optionen (nach Normalisierung)",
+            "Verbotene Muster wie 'Alle der genannten' / 'Keine der genannten' werden abgelehnt",
+            "Optionslängen-Varianz unter Schwelle — verhindert 'die längste Antwort ist die richtige'",
+            "Jede Option hat eine nicht-leere rationale",
+            "Läuft ohne LLM in Millisekunden"
+          ],
+          "notes": ["Implementierung als ItemPayload.validate() je Sealed-Subtyp (§10.2)"]
+        },
+        {
+          "key": "C4", "title": "Gate: Duplikate zu bestehenden Items erkennen",
+          "priority": "must", "milestone": "M2 — Generierung + Gates", "points": 3,
+          "labels": ["area:ai", "area:db"],
+          "story": "Als System möchte ich Near-Duplicates verwerfen, damit die Item-Bank nicht mit Umformulierungen derselben Frage vollläuft.",
+          "ac": [
+            "Vektorsuche gegen Items desselben Concepts, Cosine > 0.93 → verworfen",
+            "Läuft über den HNSW-Index, p95 unter 100 ms",
+            "Kein LLM-Aufruf nötig"
+          ]
+        },
+        {
+          "key": "C5", "title": "Schlechte Frage melden",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 3,
+          "labels": ["area:backend", "area:frontend"],
+          "story": "Als Nutzer möchte ich eine schlechte Frage mit einem Klick melden, damit sie mich nicht wieder stört und ihr keine Zeit mehr kostet.",
+          "ac": [
+            "Ein Klick, Grund wählbar: falsch / unklar / trivial / nicht im Text",
+            "Das Item verschwindet sofort aus der Rotation dieses Nutzers",
+            "report_count wird hochgezählt; ab Schwelle wandert das Item in die Review-Queue",
+            "Report-Rate pro ausgelieferter Frage ist als Metrik sichtbar (N7)"
+          ],
+          "notes": ["Diese Metrik ist unser bestes Frühwarnsignal für R1"]
+        },
+        {
+          "key": "C6", "title": "Gezielt mehr Fragen zu einem schwachen Concept generieren",
+          "priority": "should", "milestone": "M3 — Adaptive Loop", "points": 5,
+          "labels": ["area:backend", "area:ai"],
+          "story": "Als Nutzer möchte ich zu einem Thema, das ich noch nicht kann, mehr Übung anfordern, damit ich nicht dieselben drei Fragen wiedersehe.",
+          "ac": [
+            "POST /concepts/{id}/items:generate erzeugt On-Demand weitere Items",
+            "Kostenschätzung wird vorher angezeigt",
+            "Neue Items durchlaufen dieselben Gates",
+            "Bereits vorhandene Items werden als Negativbeispiele zur Duplikatvermeidung mitgegeben"
+          ],
+          "notes": ["Spart Kosten: nicht alle Items müssen beim Import erzeugt werden (§16.2)"]
+        },
+        {
+          "key": "C7", "title": "Review-Workflow für Items (Dozentenrolle)",
+          "priority": "could", "milestone": "M6 — v1.0", "points": 8,
+          "labels": ["area:backend", "area:frontend"],
+          "story": "Als Dozent möchte ich generierte Items prüfen und freigeben, damit ich die inhaltliche Verantwortung behalte.",
+          "ac": [
+            "Statusfluss DRAFT → APPROVED → PUBLISHED",
+            "Review-Queue mit Bulk-Aktionen und Filter nach Gate-Ergebnis",
+            "Items mit AMBIGUOUS_ITEM-Flag stehen priorisiert oben",
+            "Bearbeiten eines Items erzeugt eine neue Version, überschreibt keine Historie"
+          ],
+          "notes": ["Monetarisierungspfad Persona P3"]
+        },
+        {
+          "key": "C8", "title": "Erklärung zu jeder Option, nicht nur zur richtigen",
+          "priority": "must", "milestone": "M2 — Generierung + Gates", "points": 5,
+          "labels": ["area:ai", "risk:high"],
+          "story": "Als System möchte ich zu jedem Distraktor eine Begründung und einen misconceptionTag erzeugen, damit Fehleranalyse zur Laufzeit ohne LLM-Aufruf möglich ist.",
+          "ac": [
+            "Jede Option hat eine rationale (warum richtig / warum falsch)",
+            "Jeder Distraktor hat einen misconceptionTag aus einer festen Taxonomie",
+            "Distraktoren werden nach expliziten Strategien erzeugt, nicht mit 'erfinde 3 falsche Antworten'",
+            "Fehlende rationale lässt das Item am Gate C3 scheitern"
+          ],
+          "notes": [
+            "Das ist die Schlüsselstory für N1: sie macht die 'Echtzeit-Fehlerkorrektur' ohne LLM im synchronen Pfad möglich (§6.5)",
+            "Strategieliste: verwandter Begriff aus dem Nachbarkapitel, korrekte Aussage zur falschen Frage, typischer Umkehrfehler, Teilwahrheit ohne notwendige Bedingung, plausible Zahl mit falscher Einheit",
+            "Die Forschung zeigt deutlich bessere Distraktorqualität mit expliziten Experten-Heuristiken im Prompt"
+          ]
+        }
+      ]
+    },
+
+    {
+      "key": "D",
+      "title": "Epic D — Adaptives Frage-Antwort-System",
+      "label": "epic:adaptivity",
+      "projectEpic": "D Adaptivity",
+      "milestone": "M3 — Adaptive Loop",
+      "planRef": "§4.2 Epic D, §11",
+      "goal": "Die nächste Frage passt zum Können des Lernenden, und Wiedervorlagen folgen einem Gedächtnismodell.",
+      "outcome": "Die tatsächliche Erfolgsquote liegt im Zielband 0.70–0.85, POST /attempts antwortet p95 unter 400 ms.",
+      "stories": [
+        {
+          "key": "D1", "title": "Lernsession zu einem Dokument starten",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 5,
+          "labels": ["area:backend"],
+          "story": "Als Nutzer möchte ich eine Lernsession mit einem Ziel starten, damit ich weiß, worauf ich hinarbeite.",
+          "ac": [
+            "Ziel wählbar als Anzahl Fragen oder Dauer",
+            "Erste Frage ist unter 500 ms nach Sessionstart verfügbar",
+            "Scope wählbar: Dokument, Concept, fällige Wiederholungen oder gemischt",
+            "Eine unterbrochene Session ist fortsetzbar"
+          ]
+        },
+        {
+          "key": "D2", "title": "Nächste Frage nach Fähigkeitsstand auswählen",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 13,
+          "labels": ["area:backend", "risk:high"],
+          "story": "Als System möchte ich die nächste Frage so wählen, dass sie im optimalen Schwierigkeitsband liegt, damit Lernende weder gelangweilt noch frustriert sind.",
+          "ac": [
+            "Auswahl zielt auf eine Erfolgswahrscheinlichkeit im Band 0.70–0.85 (Default P_target = 0.78)",
+            "Kandidatenpool gewichtet: fällige Concepts 0.5, Session-Scope 0.3, schwächste Concepts 0.2",
+            "Concepts mit unerfüllten Voraussetzungen (mastery < 0.4) werden ausgeschlossen",
+            "Softmax-Auswahl aus den Top-5 statt Argmax — verhindert deterministische Sequenzen",
+            "Neue, unkalibrierte Items werden leicht bevorzugt (Exploration)",
+            "Auswahl dauert unter 50 ms und ruft kein LLM auf"
+          ],
+          "notes": [
+            "Das Modul adaptivity darf keine Abhängigkeit zum ai-Modul haben — ArchUnit erzwingt das (§6.3)",
+            "P_target ist Konfiguration und A/B-Test-Kandidat"
+          ]
+        },
+        {
+          "key": "D3", "title": "Elo-Update von Fähigkeit und Item-Schwierigkeit",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 8,
+          "labels": ["area:backend"],
+          "story": "Als System möchte ich nach jeder Antwort θ und Item-Schwierigkeit aktualisieren, damit sich das Modell ohne Vorkalibrierung einschwingt.",
+          "ac": [
+            "P(korrekt) = 1 / (1 + exp(-(θ − d)))",
+            "Update mit unsicherheitsabhängigem K: K(n) = a / (1 + b·n), getrennt für Nutzer und Item",
+            "Teilpunkte fließen als stetiges r ∈ [0,1] ein, nicht nur 0/1",
+            "Sehr schnelle korrekte Antworten werden leicht abgewertet (mögliches Raten)",
+            "θ_before, θ_after und p_expected werden im Attempt gespeichert (Reproduzierbarkeit)",
+            "Reine Funktionen, testbar mit Property-Based Tests"
+          ],
+          "notes": [
+            "ADR-005. Elo statt IRT, weil jedes generierte Item ein Cold-Start-Fall ist",
+            "Startwert für neue Nutzer aus dem Mittel verbundener Prerequisite-Concepts statt aus 0"
+          ]
+        },
+        {
+          "key": "D4", "title": "Sofortiges Feedback mit Begründung und Beleg",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 5,
+          "labels": ["area:backend", "area:frontend"],
+          "story": "Als Nutzer möchte ich sofort erfahren, warum meine Antwort falsch war und wo das im Text steht, damit ich es wirklich verstehe.",
+          "ac": [
+            "Antwort enthält richtig/falsch, Erklärung, rationale zur gewählten Option",
+            "Wörtliches Zitat aus der Quelle mit Seitenzahl bzw. Anker",
+            "Kein LLM-Aufruf im synchronen Pfad",
+            "Item-Text wird als Markdown mit strikter Allowlist gerendert (kein dangerouslySetInnerHTML)"
+          ],
+          "notes": ["Das Zitat kommt aus dem sourceSpan, den Gate C2 ohnehin erzwingt"]
+        },
+        {
+          "key": "D5", "title": "Wiedervorlagen nach FSRS planen",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 13,
+          "labels": ["area:backend", "risk:high"],
+          "story": "Als System möchte ich Wiederholungen nach einem Gedächtnismodell planen, damit Lernende bei gleicher Behaltensleistung weniger wiederholen müssen.",
+          "ac": [
+            "MemoryCard pro Learner × Concept mit Difficulty, Stability, Retrievability",
+            "Score wird auf FSRS-Grade abgebildet (AGAIN/HARD/GOOD/EASY)",
+            "Zielretention ist konfigurierbar (Default 0.90)",
+            "Fällige Wiederholungen sind über GET /progress/due abrufbar",
+            "Property-Test: Stability ist monoton in erfolgreichen Reviews"
+          ],
+          "notes": [
+            "ADR-006. Getrennt vom Fähigkeitsmodell: θ = Können, MemoryCard = Erinnern",
+            "Abhängig von Spike O-3 (JVM-Port nutzen oder Kern selbst implementieren)"
+          ]
+        },
+        {
+          "key": "D6", "title": "Frage überspringen oder als unklar markieren",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 2,
+          "labels": ["area:backend"],
+          "story": "Als Nutzer möchte ich eine Frage überspringen können, damit ich nicht raten muss, wenn ich sie nicht verstehe.",
+          "ac": [
+            "Skip zählt nicht als Fehler und senkt θ nicht",
+            "Skip fließt als Qualitätssignal in die Item-Bewertung ein",
+            "Häufig übersprungene Items landen in der Review-Queue"
+          ]
+        },
+        {
+          "key": "D7", "title": "Fortschritt pro Concept anzeigen",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 5,
+          "labels": ["area:backend", "area:frontend"],
+          "story": "Als Nutzer möchte ich sehen, welche Themen ich beherrsche, damit ich meine Zeit richtig einteile.",
+          "ac": [
+            "Beherrschungsgrad 0–100 % je Concept",
+            "Verlauf über die Zeit als Kurve",
+            "Erwartete Erfolgswahrscheinlichkeit der nächsten Frage ist einsehbar (Transparenz, P4)",
+            "Schwächste Concepts sind hervorgehoben"
+          ]
+        },
+        {
+          "key": "D8", "title": "Offline weiterlernen",
+          "priority": "could", "milestone": "M6 — v1.0", "points": 8,
+          "labels": ["area:frontend", "area:extension"],
+          "story": "Als Nutzer möchte ich ohne Verbindung weiterlernen, damit ich die Bahnfahrt nutzen kann.",
+          "ac": [
+            "Die nächsten N Items werden vorab geladen",
+            "Attempts werden lokal gepuffert und später synchronisiert",
+            "Konfliktstrategie: append-only, keine serverseitige Überschreibung",
+            "Der Nutzer sieht, dass er offline ist und wann zuletzt synchronisiert wurde"
+          ],
+          "notes": ["Offline gewählte Items sind nicht adaptiv — das muss die UI ehrlich kommunizieren"]
+        },
+        {
+          "key": "D9", "title": "Fragetypen zum selben Concept mischen",
+          "priority": "should", "milestone": "M3 — Adaptive Loop", "points": 3,
+          "labels": ["area:backend"],
+          "story": "Als Nutzer möchte ich denselben Inhalt in verschiedenen Frageformen sehen, damit ich Transfer übe statt Formulierungen auswendig zu lernen.",
+          "ac": [
+            "Nicht mehr als zwei Fragen desselben Typs hintereinander",
+            "Bei ausreichender Item-Bank rotieren mindestens drei Typen je Concept",
+            "Die Regel ist konfigurierbar und abschaltbar"
+          ]
+        }
+      ]
+    },
+
+    {
+      "key": "E",
+      "title": "Epic E — Echtzeit-Fehlerkorrektur & Analyse",
+      "label": "epic:analysis",
+      "projectEpic": "E Analysis",
+      "milestone": "M3 — Adaptive Loop",
+      "planRef": "§4.2 Epic E, §11.5",
+      "goal": "Das System erkennt, warum eine Antwort falsch war, und reagiert gezielt statt die Frage nur zu wiederholen.",
+      "outcome": "Wiederkehrende Missverständnisse werden benannt und aufgelöst, nicht nur gezählt.",
+      "stories": [
+        {
+          "key": "E1", "title": "Fehler nach Taxonomie klassifizieren",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 8,
+          "labels": ["area:backend", "area:ai"],
+          "story": "Als System möchte ich jeden Fehler einer Kategorie zuordnen, damit die Reaktion zum Fehlertyp passt.",
+          "ac": [
+            "Kategorien: FACTUAL_GAP, TERM_CONFUSION, CONCEPT_CONFUSION, PROCEDURAL, CARELESS, AMBIGUOUS_ITEM",
+            "Die ersten drei werden ohne LLM aus dem misconceptionTag des gewählten Distraktors abgeleitet",
+            "CARELESS (hohes θ, hohe Erfolgswahrscheinlichkeit, sehr kurze Antwortzeit) führt zu keinem θ-Abzug",
+            "AMBIGUOUS_ITEM flaggt das Item, nicht den Nutzer",
+            "Nur unbekannte Fälle gehen asynchron an ein LLM"
+          ],
+          "notes": [
+            "AMBIGUOUS_ITEM ist die wichtigste Kategorie für die Produktqualität: sie nutzt Antwortdaten zur Fehlererkennung an der Item-Bank",
+            "Konkret: scheitern Lernende mit θ > d + 1.5 deutlich über Erwartung, ist meist das Item defekt"
+          ]
+        },
+        {
+          "key": "E2", "title": "Nachfrage erzeugen, die das Missverständnis prüft",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 8,
+          "labels": ["area:backend", "area:ai"],
+          "story": "Als Nutzer möchte ich nach einem Fehler eine gezielte Nachfrage bekommen, damit ich merke, ob ich es jetzt verstanden habe.",
+          "ac": [
+            "Follow-up wird innerhalb von 2 s aus der Bank gewählt oder aus derselben Quellstelle erzeugt",
+            "Bei TERM_CONFUSION eine Kontrastfrage zwischen den verwechselten Begriffen",
+            "Das Follow-up ist nicht dasselbe Item mit anderer Optionsreihenfolge",
+            "Generierung läuft asynchron mit optimistischem UI"
+          ]
+        },
+        {
+          "key": "E3", "title": "Wiederkehrende Missverständnisse erkennen",
+          "priority": "should", "milestone": "M5 — Härtung & Beta", "points": 5,
+          "labels": ["area:backend"],
+          "story": "Als System möchte ich Muster über einzelne Fehler hinaus erkennen, damit ich gezielt eingreifen kann.",
+          "ac": [
+            "Ab 3 Fehlern derselben Kategorie im selben Concept entsteht ein Misconception-Eintrag",
+            "Der Eintrag hat ein lesbares Label, keinen Code",
+            "Eine gezielte Intervention wird vorgeschlagen",
+            "Der Eintrag wird als resolved markiert, wenn das Muster ausbleibt"
+          ]
+        },
+        {
+          "key": "E4", "title": "Freitextantwort gegen ein Rubric bewerten",
+          "priority": "should", "milestone": "M6 — v1.0", "points": 8,
+          "labels": ["area:ai", "area:backend"],
+          "story": "Als Nutzer möchte ich Freitextantworten geben und differenziert bewertet bekommen, damit ich auch Erklärkompetenz üben kann.",
+          "ac": [
+            "Bewertung mit Teilpunkten je Rubric-Kriterium",
+            "Das Rubric ist dem Nutzer sichtbar, die Bewertung ist nachvollziehbar",
+            "Konkreter Verbesserungshinweis, keine reine Punktzahl",
+            "Läuft asynchron, das UI zeigt einen Zwischenstand",
+            "Widerspruch möglich: der Nutzer kann die Bewertung anfechten"
+          ],
+          "notes": ["Der einzige Fragetyp mit LLM in der Bewertung — deshalb bewusst asynchron"]
+        },
+        {
+          "key": "E5", "title": "Wochenreport der Schwachstellen",
+          "priority": "could", "milestone": "M6 — v1.0", "points": 5,
+          "labels": ["area:backend"],
+          "story": "Als Nutzer möchte ich wöchentlich meine drei größten Lücken sehen, damit ich den Fokus setze, ohne selbst zu analysieren.",
+          "ac": [
+            "Top-3-Lücken, Trend gegenüber Vorwoche, empfohlener Fokus",
+            "Per E-Mail und in der App",
+            "Abbestellbar mit einem Klick",
+            "Kein Report, wenn in der Woche zu wenig Aktivität war"
+          ]
+        },
+        {
+          "key": "E6", "title": "Falsch beantwortete Fragen umformulieren statt wiederholen",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 5,
+          "labels": ["area:backend", "area:ai"],
+          "story": "Als Nutzer möchte ich beim Wiedersehen eine andere Formulierung bekommen, damit ich das Konzept lerne und nicht den Fragetext.",
+          "ac": [
+            "Paraphrase-Variante mit gleicher concept_id, anderem stem, über parent_item_id verknüpft",
+            "Die Variante durchläuft dieselben Gates",
+            "Bei vorhandener Variante wird keine neue erzeugt (Kostenkontrolle)",
+            "Die Selection Policy bevorzugt die Variante nach einem Fehler"
+          ]
+        }
+      ]
+    },
+
+    {
+      "key": "F",
+      "title": "Epic F — Clients: Web & Extension",
+      "label": "epic:clients",
+      "projectEpic": "F Clients",
+      "milestone": "M4 — Clients",
+      "planRef": "§4.2 Epic F, §14",
+      "goal": "Zwei Clients, eine API, keine doppelte Geschäftslogik.",
+      "outcome": "Der Nutzer lernt wahlweise im Portal oder direkt beim Lesen im Browser — mit identischem Lernstand.",
+      "risk": "R9: Scope-Explosion durch zwei parallele Clients. Gegenmaßnahme ist ADR-011, strikt durchgesetzt.",
+      "stories": [
+        {
+          "key": "F1", "title": "Web-App: Bibliothek, Import, Session, Fortschritt",
+          "priority": "must", "milestone": "M4 — Clients", "points": 13,
+          "labels": ["area:frontend"],
+          "story": "Als Nutzer möchte ich eine Web-Oberfläche für meine Dokumente und Sessions, damit ich am Rechner konzentriert lernen kann.",
+          "ac": [
+            "Bibliothek, Import mit Fortschritt (SSE), Lernsession, Fortschrittsansicht",
+            "Responsive Layout",
+            "Vollständige Tastaturbedienung: 1–9 für Optionen, Enter zum Bestätigen, Space für Weiter",
+            "Nutzt ausschließlich den generierten API-Client, keine eigene Geschäftslogik"
+          ]
+        },
+        {
+          "key": "F2", "title": "Extension: Side Panel mit Session zur aktuellen Seite",
+          "priority": "must", "milestone": "M4 — Clients", "points": 13,
+          "labels": ["area:extension"],
+          "story": "Als Nutzer möchte ich neben der gelesenen Seite lernen, damit ich den Lesefluss nicht unterbreche.",
+          "ac": [
+            "MV3 mit Side Panel API, öffnet ohne Seiten-Reload",
+            "Seite bleibt sichtbar, während die Frage im Panel steht",
+            "Service Worker übernimmt Auth und API-Calls, der Content Script nie",
+            "Teilt React-Komponenten mit der Web-App"
+          ]
+        },
+        {
+          "key": "F3", "title": "Extension: markierten Text in eine Frage verwandeln",
+          "priority": "must", "milestone": "M4 — Clients", "points": 5,
+          "labels": ["area:extension"],
+          "story": "Als Nutzer möchte ich eine Textstelle markieren und daraus sofort eine Frage bekommen, damit ich punktuell prüfen kann, ob ich es verstanden habe.",
+          "ac": [
+            "Kontextmenüeintrag auf Selektion",
+            "Die Frage erscheint im Side Panel",
+            "Die Markierung wird als Quelle mit Beleg gespeichert",
+            "Zu kurze Selektionen werden mit einem Hinweis abgelehnt"
+          ]
+        },
+        {
+          "key": "F4", "title": "Extension: minimale Permissions",
+          "priority": "must", "milestone": "M4 — Clients", "points": 3,
+          "labels": ["area:extension", "area:security", "risk:high"],
+          "story": "Als Nutzer möchte ich, dass die Extension so wenig Rechte wie möglich verlangt, damit ich sie überhaupt installiere.",
+          "ac": [
+            "Permissions: activeTab, sidePanel, storage, identity, contextMenus",
+            "Kein <all_urls> in host_permissions — nur optional_host_permissions",
+            "Kein Remote-Code, keine eval",
+            "Die Datenschutzerklärung erklärt jede Permission in einem Satz"
+          ],
+          "notes": [
+            "R5: Store-Ablehnung ist ein reales Risiko und kostet Wochen",
+            "activeTab statt <all_urls> ist zugleich ein Vertrauenssignal in der Store-Beschreibung"
+          ]
+        },
+        {
+          "key": "F5", "title": "Barrierefreiheit der Session-Ansicht (WCAG 2.2 AA)",
+          "priority": "should", "milestone": "M5 — Härtung & Beta", "points": 8,
+          "labels": ["area:frontend", "area:extension"],
+          "story": "Als Nutzer mit Screenreader möchte ich Fragen beantworten können, damit mich das Format nicht ausschließt.",
+          "ac": [
+            "WCAG 2.2 AA für die Session-Ansicht",
+            "Alle Fragetypen haben sinnvolle ARIA-Labels — besonders ORDERING und MATCHING",
+            "Drag-and-Drop hat eine tastaturbedienbare Alternative",
+            "Kontrast und Fokusreihenfolge geprüft, automatisiert im CI"
+          ],
+          "notes": ["ORDERING und MATCHING sind die kritischen Fälle — reines Drag-and-Drop ist nicht barrierefrei"]
+        },
+        {
+          "key": "F6", "title": "Mehrsprachigkeit (UI de/en, Fragen in Dokumentsprache)",
+          "priority": "should", "milestone": "M6 — v1.0", "points": 5,
+          "labels": ["area:frontend", "area:backend"],
+          "story": "Als Nutzer möchte ich die Oberfläche in meiner Sprache und Fragen in der Sprache meines Materials, damit nichts durch Übersetzung verloren geht.",
+          "ac": [
+            "UI in Deutsch und Englisch",
+            "Fragensprache folgt der erkannten Dokumentsprache, ist aber umschaltbar",
+            "Sprachcode ist pro Item gespeichert",
+            "Gemischtsprachige Dokumente werden pro Chunk erkannt"
+          ],
+          "notes": ["Abhängig von Spike O-1 (Zielsprachen v1)"]
+        }
+      ]
+    },
+
+    {
+      "key": "G",
+      "title": "Epic G — Plattform, Qualität & Betrieb",
+      "label": "epic:platform",
+      "projectEpic": "G Platform",
+      "milestone": "M0 — Walking Skeleton",
+      "planRef": "§6, §15, §16, §17",
+      "goal": "Das Fundament, auf dem die fachlichen Epics stehen: Modulgrenzen, Jobs, LLM-Abstraktion, Sicherheit, Messbarkeit.",
+      "outcome": "Alle NFRs aus §4.3 sind gemessen, nicht behauptet. Architekturverstöße brechen den Build.",
+      "stories": [
+        {
+          "key": "G1", "title": "Walking Skeleton: Modulith-Grundgerüst mit erzwungenen Modulgrenzen",
+          "priority": "must", "milestone": "M0 — Walking Skeleton", "points": 8,
+          "labels": ["area:backend", "area:infra", "type:chore"],
+          "story": "Als Team möchten wir das Modulgerüst mit erzwungenen Grenzen aufsetzen, damit die Struktur nicht erst nachträglich verteidigt werden muss.",
+          "ac": [
+            "Zehn Pakete angelegt: shared, identity, ai, content, knowledge, authoring, assessment, adaptivity, analytics, platform",
+            "Jedes Modul hat api/ (öffentlich) und internal/ (privat)",
+            "ApplicationModules.verify() läuft im Build und bricht bei Verstößen",
+            "ArchUnit-Regel: adaptivity darf nicht auf ai zugreifen",
+            "ArchUnit-Regel: Spring-AI-Typen nur in ai/internal",
+            "Modulith-Dokumentation wird generiert"
+          ],
+          "notes": ["ADR-001/ADR-004. Die zweite und dritte Regel sind die wichtigsten — sie schützen Latenz und Austauschbarkeit"]
+        },
+        {
+          "key": "G2", "title": "Postgres + pgvector, Flyway-Baseline nach Schema §8.1",
+          "priority": "must", "milestone": "M0 — Walking Skeleton", "points": 8,
+          "labels": ["area:db", "area:infra"],
+          "story": "Als Team möchten wir das Schema versioniert und reproduzierbar aufsetzen, damit lokale und produktive Umgebungen identisch sind.",
+          "ac": [
+            "compose.yaml startet pgvector/pgvector:pg17",
+            "Flyway-Migration V1 legt Extensions, alle Tabellen aus §8.1 und die HNSW-Indizes an",
+            "hibernate.ddl-auto=validate, kein Auto-Schema",
+            "Testcontainers-Basisklasse für Integrationstests",
+            "Vektor-Dimension kommt aus einer Konstante, nicht verstreut"
+          ],
+          "notes": ["Blockiert durch Spike O-2 (Embedding-Modell bestimmt VECTOR(n) — späterer Wechsel bedeutet Re-Embedding aller Chunks)"]
+        },
+        {
+          "key": "G3", "title": "CI-Pipeline: Build, Test, Architekturprüfung",
+          "priority": "must", "milestone": "M0 — Walking Skeleton", "points": 5,
+          "labels": ["area:infra", "type:chore"],
+          "story": "Als Team möchten wir bei jedem Push automatisch bauen und prüfen, damit Regressionen nicht in den main gelangen.",
+          "ac": [
+            "GitHub Actions: Build, Unit-Tests, Integrationstests (Testcontainers), architectureTest",
+            "Statische Analyse: ktlint oder detekt",
+            "Dependency-Scan (z. B. Dependabot) aktiv",
+            "Build-Zeit unter 10 min",
+            "Branch Protection auf main mit grüner Pipeline als Voraussetzung"
+          ]
+        },
+        {
+          "key": "G4", "title": "Job-Infrastruktur mit Wiederaufsetzbarkeit und SSE-Fortschritt",
+          "priority": "must", "milestone": "M1 — Ingestion", "points": 8,
+          "labels": ["area:backend", "area:infra"],
+          "story": "Als System möchte ich lang laufende Arbeit zuverlässig ausführen, damit ein Neustart keinen Import verliert.",
+          "ac": [
+            "Job-Tabelle mit SELECT … FOR UPDATE SKIP LOCKED",
+            "Idempotenz über einen eindeutigen job_key",
+            "Retry mit exponentiellem Backoff, danach Dead-Letter-Zustand",
+            "Fortschritt über Modulith-Events und SSE an den Client",
+            "Worker läuft als eigenes Spring-Profil desselben Artefakts",
+            "Ein Neustart mitten im Import setzt sauber wieder auf"
+          ],
+          "notes": ["ADR-012. Alternative JobRunr statt Eigenbau wird beim Bau anhand des Retry-/Scheduling-Bedarfs entschieden"]
+        },
+        {
+          "key": "G5", "title": "LlmGateway-Port, ModelRouter und Spring-AI-Adapter",
+          "priority": "must", "milestone": "M1 — Ingestion", "points": 13,
+          "labels": ["area:ai", "area:backend", "risk:high"],
+          "story": "Als Team möchten wir den LLM-Zugriff hinter einen eigenen Port legen, damit Provider- und Framework-Wechsel lokal bleiben.",
+          "ac": [
+            "Ports: LlmGateway, EmbeddingGateway, ModelRouter — keine Spring-AI-Typen in Signaturen außerhalb ai/internal",
+            "Structured Output über JSON Schema, mit nativer Provider-Unterstützung wo verfügbar",
+            "Routing nach Task-Klasse ist Konfiguration, pro Workspace überschreibbar",
+            "Mindestens zwei Provider laufen nachweislich gegen dieselben Tests (N12)",
+            "Ollama funktioniert als lokaler Provider",
+            "Retry, Timeout, Rate-Limit-Handling und Fallback-Modell sind implementiert"
+          ],
+          "notes": [
+            "ADR-004/ADR-010. Spring AI 2.x war Mitte 2026 im Milestone-/GA-Übergang — Version prüfen und pinnen",
+            "Der Nachweis mit zwei Providern ist die eigentliche Abnahme dieser Story"
+          ]
+        },
+        {
+          "key": "G6", "title": "Token- und Kostenerfassung mit Circuit Breaker",
+          "priority": "must", "milestone": "M1 — Ingestion", "points": 5,
+          "labels": ["area:ai", "area:backend"],
+          "story": "Als Betreiber möchte ich jeden LLM-Aufruf messen und begrenzen können, damit Kosten nie überraschen.",
+          "ac": [
+            "Jeder Aufruf schreibt nach llm_usage: Tokens, Kosten in Mikro-Euro, Latenz, Modell, Task, Ergebnis",
+            "Kostenschätzung vor dem Start eines Imports",
+            "Circuit Breaker stoppt bei Erreichen des Workspace-Budgets",
+            "Metriken llm.tokens und llm.cost_micros liegen in Micrometer vor",
+            "Prompt-Version ist Teil jedes Log-Eintrags"
+          ],
+          "notes": ["R2. Ohne diese Story ist N8 (<0,50 € pro 100 Seiten) nicht überprüfbar"]
+        },
+        {
+          "key": "G7", "title": "Mandantentrennung: TenantContext, RLS und Cross-Tenant-Test",
+          "priority": "must", "milestone": "M5 — Härtung & Beta", "points": 8,
+          "labels": ["area:security", "area:db", "risk:high"],
+          "story": "Als Nutzer möchte ich sicher sein, dass niemand meine Dokumente sieht, damit ich vertrauliches Material hochladen kann.",
+          "ac": [
+            "TenantContext aus dem JWT, in jede Repository-Query eingebunden",
+            "PostgreSQL Row Level Security auf allen workspace_id-Tabellen als zweite Verteidigungslinie",
+            "SET LOCAL app.workspace_id pro Transaktion",
+            "Parametrisierter Test über alle Repository-Methoden: fremder Tenant liefert leer oder wirft",
+            "ArchUnit verbietet Repository-Methoden ohne Tenant-Behandlung auf mandantenfähigen Tabellen"
+          ],
+          "notes": [
+            "N9. Bewusst redundant: ein Datenleck bei Uni-Skripten wäre existenzbedrohend (Persona P4)",
+            "Sollte eher früher als in M5 gebaut werden, wenn es der Zeitplan hergibt"
+          ]
+        },
+        {
+          "key": "G8", "title": "Eval-Harness für Fragenqualität mit Gold-Set",
+          "priority": "must", "milestone": "M2 — Generierung + Gates", "points": 13,
+          "labels": ["area:ai", "area:infra", "risk:high"],
+          "story": "Als Team möchten wir Fragenqualität messbar machen, damit Prompt-Änderungen wie Codeänderungen geprüft werden können.",
+          "ac": [
+            "Gold-Set aus 10 Dokumenten verschiedener Fächer, Sprachen und Formate",
+            "200 manuell annotierte Referenz-Items",
+            "Automatische Metriken: Gate-Durchlassquote, Duplikatrate, Typ- und Bloom-Verteilung, Groundedness",
+            "LLM-as-Judge läuft auf einem anderen Modell als dem generierenden",
+            "Report vergleicht gegen die Vorversion",
+            "CI-Gate: faktische Fehlerrate ≤ 5 %, sonst kein Merge einer Prompt-Änderung"
+          ],
+          "notes": [
+            "Die wichtigste Story im ganzen Backlog. Ohne sie schleicht Qualität unbemerkt weg (R1)",
+            "Deshalb in M2 und nicht später"
+          ]
+        },
+        {
+          "key": "G9", "title": "Simulator für die adaptive Engine",
+          "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 8,
+          "labels": ["area:backend", "area:infra"],
+          "story": "Als Team möchten wir die Adaptionslogik offline simulieren, damit wir K-Faktoren und P_target tunen können, bevor echte Nutzer betroffen sind.",
+          "ac": [
+            "Synthetische Lernende mit bekanntem wahren θ und Vergessenskurve",
+            "Messung: konvergiert geschätztes θ gegen wahres θ, und wie schnell",
+            "Messung: konvergiert geschätzte Item-Schwierigkeit gegen die wahre",
+            "Messung: liegt die tatsächliche Erfolgsquote im Band 0.70–0.85",
+            "Messung: Brier-Score von p_expected < 0.18",
+            "Szenario: ein Nutzer wird plötzlich deutlich besser"
+          ],
+          "notes": ["R3. Der einzige realistische Weg, Adaptionslogik vor dem Launch zu validieren"]
+        },
+        {
+          "key": "G10", "title": "Observability: Tracing, Metriken, LLM-Nachvollziehbarkeit",
+          "priority": "should", "milestone": "M5 — Härtung & Beta", "points": 5,
+          "labels": ["area:infra"],
+          "story": "Als Betreiber möchte ich sehen, was das System tut, damit ich Probleme finde, bevor Nutzer sie melden.",
+          "ac": [
+            "OpenTelemetry: ein Trace je Import-Job und je Attempt-Request",
+            "Micrometer: llm.*, item.gate.result, session.attempt.latency, ingest.duration, adaptivity.calibration.brier",
+            "Jeder LLM-Aufruf ist über correlation_id, Prompt-Version, Modell, Tokens und Gate-Ergebnis nachvollziehbar (N13)",
+            "Dashboard für die NFR-Metriken aus §4.3"
+          ]
+        },
+        {
+          "key": "G11", "title": "Sicherheitssuite: SSRF, Uploads, Prompt-Injection-Trennung",
+          "priority": "must", "milestone": "M5 — Härtung & Beta", "points": 8,
+          "labels": ["area:security", "risk:high"],
+          "story": "Als Betreiber möchte ich die Bedrohungen aus §15.1 automatisiert abgedeckt haben, damit sie nicht bei jedem Release neu geprüft werden müssen.",
+          "ac": [
+            "SSRF-Tests für den URL-Import (private IPs, Redirects, Metadaten-Endpunkte)",
+            "Upload-Tests: ZIP-Bombe, XXE, überlanges PDF, falscher Content-Type",
+            "Prompt-Injection: Dokumentinhalt landet nie in der System-Rolle; Test mit präpariertem PDF",
+            "Log-Scrubbing-Test: kein Credential erscheint im Klartext in Logs",
+            "XSS-Test für gerenderten Item-Text",
+            "Die Suite läuft verpflichtend im CI"
+          ]
+        },
+        {
+          "key": "G12", "title": "Lasttest, Backup und Restore-Probe",
+          "priority": "should", "milestone": "M5 — Härtung & Beta", "points": 5,
+          "labels": ["area:infra"],
+          "story": "Als Betreiber möchte ich wissen, dass das System die Zielgrößen hält und dass Backups wirklich funktionieren.",
+          "ac": [
+            "Lasttest mit 200 parallelen Sessions: CPU < 60 %, keine Fehler, eine App-Instanz (2 vCPU / 4 GB)",
+            "p95 von POST /attempts unter 400 ms unter Last",
+            "PITR-Backup eingerichtet, RPO ≤ 5 min, RTO ≤ 1 h",
+            "Eine echte Restore-Probe wurde durchgeführt und dokumentiert",
+            "Vektorsuche p95 unter 100 ms bei realistischer Datenmenge"
+          ],
+          "notes": ["Ein ungeprüftes Backup ist kein Backup"]
+        },
+        {
+          "key": "G13", "title": "OpenAPI als Quelle der Wahrheit und generierter TS-Client",
+          "priority": "must", "milestone": "M4 — Clients", "points": 5,
+          "labels": ["area:backend", "area:frontend", "area:infra"],
+          "story": "Als Team möchten wir einen generierten API-Client für beide Frontends, damit keine doppelte Logik entsteht und Breaking Changes sofort auffallen.",
+          "ac": [
+            "springdoc erzeugt eine vollständige OpenAPI-Spezifikation inklusive Fehlerschemata",
+            "TS-Client wird im CI generiert und als gemeinsames Package veröffentlicht",
+            "Web-App und Extension nutzen ausschließlich diesen Client",
+            "Ein Breaking Change bricht den Build der Clients",
+            "API ist versioniert und mindestens N-1 rückwärtskompatibel"
+          ],
+          "notes": ["ADR-011. Die Rückwärtskompatibilität ist nötig, weil Extension-Releases durch das Store-Review verzögert werden"]
+        }
+      ]
+    }
+  ],
+
+  "spikes": [
+    {
+      "key": "O-1", "title": "Spike: Zielsprachen für v1 festlegen",
+      "priority": "must", "milestone": "M0 — Walking Skeleton", "points": 2,
+      "labels": ["needs-decision", "area:ai", "area:docs"],
+      "question": "Welche Inhaltssprachen unterstützt v1?",
+      "why": "Bestimmt Prompts, Stoppwörter, Spracherkennung, Cloze-Normalisierung und die Wahl des Embedding-Modells.",
+      "ac": [
+        "Entscheidung dokumentiert (Vorschlag: nur de/en in v1)",
+        "Auswirkung auf O-2 geprüft",
+        "PLAN.md §20 aktualisiert"
+      ],
+      "timebox": "0.5 Tage"
+    },
+    {
+      "key": "O-2", "title": "Spike: Embedding-Modell und Vektor-Dimension festlegen",
+      "priority": "must", "milestone": "M0 — Walking Skeleton", "points": 3,
+      "labels": ["needs-decision", "area:ai", "area:db", "risk:high"],
+      "question": "Welches Embedding-Modell nutzen wir, und mit welcher Dimension?",
+      "why": "VECTOR(n) wird in der ersten Flyway-Migration festgenagelt. Ein späterer Wechsel bedeutet Re-Embedding aller Chunks und Items.",
+      "ac": [
+        "Mindestens drei Kandidaten auf deutschem Fachtext verglichen (Retrieval-Qualität, Kosten, Dimension)",
+        "Entscheidung mit Zahlen begründet",
+        "Dimension als Konstante im Code, nicht verstreut",
+        "Migrationsstrategie für einen späteren Wechsel skizziert"
+      ],
+      "timebox": "1–2 Tage",
+      "blocks": ["G2"]
+    },
+    {
+      "key": "O-3", "title": "Spike: FSRS — JVM-Port nutzen oder Kern selbst implementieren",
+      "priority": "must", "milestone": "M3 — Adaptive Loop", "points": 3,
+      "labels": ["needs-decision", "area:backend"],
+      "question": "Gibt es einen gepflegten JVM-Port von FSRS mit passender Lizenz, oder implementieren wir den Kern selbst?",
+      "why": "Betrifft Wartung, Lizenz und die Frage, welche FSRS-Version wir fahren.",
+      "ac": [
+        "Verfügbare Ports mit Lizenz, Aktivität und unterstützter FSRS-Version aufgelistet",
+        "Entscheidung dokumentiert",
+        "Referenz-Testvektoren beschafft, gegen die die Implementierung geprüft wird"
+      ],
+      "timebox": "1 Tag",
+      "blocks": ["D5"]
+    },
+    {
+      "key": "O-4", "title": "Spike: Provider-Nutzungsbedingungen für Endnutzer-Keys prüfen",
+      "priority": "must", "milestone": "M1 — Ingestion", "points": 2,
+      "labels": ["needs-decision", "area:security", "risk:high"],
+      "question": "Welche LLM-Provider erlauben, dass eine Drittanwendung Endnutzer-Keys verwendet? Welche bieten OAuth?",
+      "why": "Rechtliche Grundlage für BYOK (R7). Unterscheidet sich pro Provider und ist keine technische Frage.",
+      "ac": [
+        "ToS je Provider geprüft und mit Fundstelle dokumentiert",
+        "Liste der Provider mit OAuth-Unterstützung (PKCE) für Drittanbieter-Apps",
+        "Entscheidung, welche Provider in v1 als BYOK angeboten werden"
+      ],
+      "timebox": "1 Tag",
+      "blocks": ["A3"]
+    },
+    {
+      "key": "O-5", "title": "Spike: Hosting und Region festlegen",
+      "priority": "must", "milestone": "M1 — Ingestion", "points": 2,
+      "labels": ["needs-decision", "area:infra", "area:security"],
+      "question": "Wo läuft die Anwendung, und in welcher Region?",
+      "why": "N10 und die DSGVO-Argumentation gegenüber institutionellen Gatekeepern (Persona P4). Beeinflusst auch die Kosten.",
+      "ac": [
+        "EU-Anbieter verglichen (Kosten, Managed Postgres mit pgvector, S3, Betriebsaufwand)",
+        "Entscheidung dokumentiert",
+        "Datenflussdiagramm erstellt: welche Daten gehen wohin"
+      ],
+      "timebox": "1 Tag"
+    },
+    {
+      "key": "O-6", "title": "Spike: Preismodell und Free-Limits definieren",
+      "priority": "should", "milestone": "M4 — Clients", "points": 3,
+      "labels": ["needs-decision"],
+      "question": "Was kostet das Produkt, und wie großzügig ist das Gratis-Kontingent?",
+      "why": "Bestimmt Quota-Design und das Plattform-Key-Budget. Muss vor M5 stehen, weil A6 und G6 darauf aufbauen.",
+      "ac": [
+        "Kosten pro aktivem Nutzer aus der Formel in §16.2 hochgerechnet",
+        "Free-Limits festgelegt (Dokumente, Items, Kostenbudget)",
+        "Preispunkte für Pro und EDU skizziert"
+      ],
+      "timebox": "1 Tag",
+      "blocks": ["A6"]
+    },
+    {
+      "key": "O-7", "title": "Spike: Umgang mit Bildern, Formeln und Tabellen in PDFs",
+      "priority": "should", "milestone": "M2 — Generierung + Gates", "points": 3,
+      "labels": ["needs-decision", "area:ai", "risk:high"],
+      "question": "Wie behandeln wir Inhalte, die kein Fließtext sind?",
+      "why": "Ganze Fächer (Mathematik, Medizin, Ingenieurwesen) hängen daran. Betrifft direkt die Marktgröße.",
+      "ac": [
+        "Formelextraktion nach LaTeX geprüft (Machbarkeit, Qualität)",
+        "Tabellenextraktion geprüft — Tika liefert keine Tabellenstruktur",
+        "Entscheidung für v1 dokumentiert (Vorschlag: Text-only, Formeln als LaTeX wenn extrahierbar)",
+        "VLM-basierter Layout-Parser als v2-Option bewertet"
+      ],
+      "timebox": "2 Tage"
+    },
+    {
+      "key": "O-8", "title": "Spike: Workspace-Modell — ein Workspace pro Nutzer oder Teams ab v1",
+      "priority": "could", "milestone": "M4 — Clients", "points": 1,
+      "labels": ["needs-decision", "area:backend"],
+      "question": "Bleibt es bei einem Workspace pro Nutzer, oder brauchen wir Teams schon in v1?",
+      "why": "Das Datenmodell ist bereits teamfähig, die UI nicht. Nachträglich einzuziehen ist teuer.",
+      "ac": [
+        "Entscheidung dokumentiert (Vorschlag: einer pro Nutzer in v1, Schema bleibt teamfähig)",
+        "Falls Teams: Rollenmodell und Einladungsfluss skizziert"
+      ],
+      "timebox": "0.5 Tage"
+    }
+  ]
+}

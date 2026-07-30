@@ -1,0 +1,99 @@
+# =============================================================================
+#  LearnWithMe — zentraler Versionskatalog
+# =============================================================================
+#  Alle Versionen stehen hier, damit Upgrades an genau einer Stelle passieren
+#  und in Reviews sichtbar sind. Siehe docs/PLAN.md §7 (ADRs) für die
+#  Begründung der jeweiligen Technologieentscheidung.
+#
+#  ⚠ ZU PRÜFEN vor dem ersten Build (Stand: Juli 2026):
+#     - springAi: 2.0.x war Mitte 2026 im Milestone-/GA-Übergang.
+#       Aktuelle Version prüfen: https://github.com/spring-projects/spring-ai/releases
+#       Bei einer GA-Version die Zeile `spring-milestones` in settings.gradle.kts
+#       wieder entfernen.
+#     - springModulith: 2.0.x ist die für Spring Boot 4 gebaute Linie.
+# =============================================================================
+
+[versions]
+kotlin              = "2.3.21"
+springBoot          = "4.1.0"
+springDependencyMgmt = "1.1.7"
+springModulith      = "2.0.0"
+springAi            = "2.0.0-M8"      # ⚠ prüfen, siehe oben
+springdoc           = "3.0.1"
+testcontainers      = "1.20.6"
+archunit            = "1.3.0"
+mockk               = "1.13.13"
+kotest              = "5.9.1"
+coroutines          = "1.9.0"
+tika                = "3.1.0"
+jsoup               = "1.18.3"
+readability4j       = "1.0.8"
+pgvector            = "0.1.6"
+flyway              = "11.3.4"
+
+[libraries]
+# ── Spring Boot (Versionen kommen aus dem Boot-BOM) ───────────────────────────
+# Spring Boot 4 hat die Starter modularisiert: aus `-web` wurde `-webmvc`,
+# und je Starter existiert ein eigener `-test`-Starter.
+spring-boot-starter-webmvc        = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+spring-boot-starter-data-jpa      = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-validation    = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-security      = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-oauth2-rs     = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
+spring-boot-starter-actuator      = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-webmvc-test   = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
+spring-boot-testcontainers        = { module = "org.springframework.boot:spring-boot-testcontainers" }
+spring-boot-docker-compose        = { module = "org.springframework.boot:spring-boot-docker-compose" }
+
+# ── Kotlin ───────────────────────────────────────────────────────────────────
+kotlin-reflect                    = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+kotlin-test-junit5                = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
+kotlinx-coroutines-core           = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-reactor        = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "coroutines" }
+jackson-module-kotlin             = { module = "tools.jackson.module:jackson-module-kotlin" }
+
+# ── Persistenz ───────────────────────────────────────────────────────────────
+postgresql                        = { module = "org.postgresql:postgresql" }
+flyway-core                       = { module = "org.flywaydb:flyway-core" }
+flyway-postgresql                 = { module = "org.flywaydb:flyway-database-postgresql" }
+pgvector                          = { module = "com.pgvector:pgvector", version.ref = "pgvector" }
+
+# ── Spring Modulith (ADR-001) ────────────────────────────────────────────────
+modulith-bom                      = { module = "org.springframework.modulith:spring-modulith-bom", version.ref = "springModulith" }
+modulith-starter-core             = { module = "org.springframework.modulith:spring-modulith-starter-core" }
+modulith-starter-jpa              = { module = "org.springframework.modulith:spring-modulith-starter-jpa" }
+modulith-starter-test             = { module = "org.springframework.modulith:spring-modulith-starter-test" }
+modulith-actuator                 = { module = "org.springframework.modulith:spring-modulith-actuator" }
+modulith-observability            = { module = "org.springframework.modulith:spring-modulith-observability" }
+
+# ── Spring AI (ADR-004: nur in ai/internal verwenden!) ───────────────────────
+spring-ai-bom                     = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
+spring-ai-openai                  = { module = "org.springframework.ai:spring-ai-starter-model-openai" }
+spring-ai-anthropic               = { module = "org.springframework.ai:spring-ai-starter-model-anthropic" }
+spring-ai-ollama                  = { module = "org.springframework.ai:spring-ai-starter-model-ollama" }
+spring-ai-pgvector                = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
+
+# ── Content-Extraktion (M1) ──────────────────────────────────────────────────
+tika-core                         = { module = "org.apache.tika:tika-core", version.ref = "tika" }
+tika-parsers                      = { module = "org.apache.tika:tika-parsers-standard-package", version.ref = "tika" }
+jsoup                             = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+readability4j                     = { module = "net.dankito.readability4j:readability4j", version.ref = "readability4j" }
+
+# ── API-Dokumentation ────────────────────────────────────────────────────────
+springdoc-webmvc-ui               = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+
+# ── Test ─────────────────────────────────────────────────────────────────────
+testcontainers-bom                = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
+testcontainers-junit              = { module = "org.testcontainers:junit-jupiter" }
+testcontainers-postgresql         = { module = "org.testcontainers:postgresql" }
+archunit-junit5                   = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+mockk                             = { module = "io.mockk:mockk", version.ref = "mockk" }
+kotest-assertions                 = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+junit-platform-launcher           = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+kotlin-jvm            = { id = "org.jetbrains.kotlin.jvm",           version.ref = "kotlin" }
+kotlin-spring         = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlin-jpa            = { id = "org.jetbrains.kotlin.plugin.jpa",    version.ref = "kotlin" }
+spring-boot           = { id = "org.springframework.boot",           version.ref = "springBoot" }
+spring-dependency-mgmt = { id = "io.spring.dependency-management",   version.ref = "springDependencyMgmt" }

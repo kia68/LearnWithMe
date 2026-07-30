@@ -1,0 +1,49 @@
+# Lokale Entwicklungsumgebung.
+# Spring Boot startet diese Datei automatisch (spring-boot-docker-compose),
+# wenn die Anwendung mit dem Profil `local` läuft.
+services:
+  postgres:
+    # pgvector-Image statt reinem Postgres — die Extension muss vorhanden sein,
+    # bevor Flyway `CREATE EXTENSION vector` ausführt (ADR-002).
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: learnwithme
+      POSTGRES_USER: learnwithme
+      POSTGRES_PASSWORD: learnwithme
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learnwithme -d learnwithme"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Objektspeicher für Originaldateien (§6.2). S3-kompatibel, damit der
+  # Produktionswechsel zu einem echten S3-Anbieter nur Konfiguration ist.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: learnwithme
+      MINIO_ROOT_PASSWORD: learnwithme
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  # Optional: lokaler Modellbetrieb (§13.1). Auskommentiert, weil das Image
+  # groß ist und nicht jeder es beim ersten Start ziehen will.
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollamadata:/root/.ollama
+
+volumes:
+  pgdata:
+  miniodata:
+  # ollamadata:
