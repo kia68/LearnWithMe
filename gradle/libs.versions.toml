@@ -46,6 +46,12 @@ spring-boot-starter-actuator      = { module = "org.springframework.boot:spring-
 spring-boot-starter-webmvc-test   = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 spring-boot-testcontainers        = { module = "org.springframework.boot:spring-boot-testcontainers" }
 spring-boot-docker-compose        = { module = "org.springframework.boot:spring-boot-docker-compose" }
+# Boot 4 hat auch die Autokonfiguration technologieweise aufgeteilt: `flyway-core` allein
+# (unten) bringt nur die Engine mit, nicht mehr Boots FlywayAutoConfiguration/FlywayMigrationStrategy
+# (früher Teil des monolithischen `spring-boot-autoconfigure`) — ohne dieses Artefakt läuft
+# Flyway nie, `ddl-auto=validate` schlägt dann mit "missing table" fehl (kein Fehler von Flyway
+# selbst, sondern Stille: Migrationen werden schlicht nie versucht).
+spring-boot-flyway                = { module = "org.springframework.boot:spring-boot-flyway" }
 
 # ── Kotlin ───────────────────────────────────────────────────────────────────
 kotlin-reflect                    = { module = "org.jetbrains.kotlin:kotlin-reflect" }

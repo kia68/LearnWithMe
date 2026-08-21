@@ -52,6 +52,7 @@ dependencies {
 
     // ── Persistenz ───────────────────────────────────────────────────────────
     implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.spring.boot.flyway)               // Boot 4: FlywayAutoConfiguration ist ein eigenes Artefakt
     implementation(libs.flyway.core)
     implementation(libs.flyway.postgresql)
     implementation(libs.pgvector)                         // Vektor-Typ für JPA (ADR-002)
