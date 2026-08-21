@@ -75,6 +75,9 @@ class Item(
     @Column(name = "report_count", nullable = false)
     var reportCount: Int = 0,
 
+    @Column(name = "skip_count", nullable = false)
+    var skipCount: Int = 0,
+
     @Column(name = "generated_by")
     var generatedBy: String? = null,
 

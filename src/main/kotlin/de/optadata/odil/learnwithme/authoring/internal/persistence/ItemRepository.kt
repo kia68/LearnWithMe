@@ -14,9 +14,13 @@ interface ItemRepository : JpaRepository<Item, UUID> {
 
     fun findAllByConceptIdOrderByCreatedAtDesc(conceptId: UUID): List<Item>
 
+    fun findAllByConceptIdAndStatus(conceptId: UUID, status: ItemStatus): List<Item>
+
     fun findAllByWorkspaceIdAndStatusOrderByCreatedAtDesc(workspaceId: UUID, status: ItemStatus, pageable: Pageable): Page<Item>
 
     fun findByIdAndWorkspaceId(id: UUID, workspaceId: UUID): Item?
+
+    fun findByIdAndWorkspaceIdAndStatus(id: UUID, workspaceId: UUID, status: ItemStatus): Item?
 
     fun countByConceptIdAndStatusNot(conceptId: UUID, status: ItemStatus): Long
 

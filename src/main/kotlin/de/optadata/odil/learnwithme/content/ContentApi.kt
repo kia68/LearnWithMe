@@ -9,6 +9,7 @@ data class ChunkView(
     val text: String,
     val charFrom: Int,
     val charTo: Int,
+    val pageFrom: Int? = null,
 )
 
 /** Öffentlicher Port des `content`-Moduls, u.a. für `knowledge` (Konzeptextraktion, B8) und

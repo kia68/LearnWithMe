@@ -26,5 +26,5 @@ class ContentApiImpl(
     override fun getChunk(chunkId: UUID): ChunkView? =
         chunkRepository.findById(chunkId).orElse(null)?.toView()
 
-    private fun Chunk.toView() = ChunkView(id, sourceId, ordinal, text, charFrom, charTo)
+    private fun Chunk.toView() = ChunkView(id, sourceId, ordinal, text, charFrom, charTo, pageFrom)
 }

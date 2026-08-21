@@ -132,3 +132,107 @@ Branch: `epicC` (von `main`, das zu diesem Zeitpunkt bereits Epic A+B enthielt).
 - Kostenschätzung (`SpringAiLlmGateway.estimateCostMicros`) ist eine grobe, hartcodierte
   Preistabelle für `gpt-4o`/`gpt-4o-mini` — keine Abrechnungsgrundlage, dient nur A4/A6.
 - Wie immer: kein Docker hier → Migration V5, `@SpringBootTest`, Testcontainers-Tests ungeprüft.
+
+## Epic D — Adaptives Frage-Antwort-System
+
+Branch: `epicD` (von `main`, das zu diesem Zeitpunkt Epic A+B+C enthielt). Zwei neue Module
+`assessment` (Sessions/Attempts, der kritische Antwort-Pfad) und `adaptivity` (Elo + FSRS, reine
+Mathematik ohne LLM- oder Item-Abhängigkeit, §6.3).
+
+- **D1** — `POST /api/v1/sessions { scopeKind, scopeId?, goalKind, goalValue }` → Session +
+  erste Frage in einem Roundtrip, kein LLM im Pfad.
+- **D2** — Item-Auswahl (§11.3): Kandidatenpool je Scope → Ausschluss zuletzt gesehener Items
+  (session-lokales Fenster) → Score `-|P(θ,d) - Zielwert| + Explore-Bonus` → Softmax-Ziehung aus
+  Top-5 (τ konfigurierbar). Zielband 0.70–0.85 über `learnwithme.adaptivity.target-success-probability`.
+- **D3** — Elo-Update (ADR-005, `adaptivity.internal.engine.EloEngine`): θ/Item-Schwierigkeit nach
+  jeder Antwort, unsicherheitsabhängiger K-Faktor, θ/d geklemmt auf `[-4, +4]`. Item-Schwierigkeit
+  wird über `AuthoringApi.updateCalibration` zurückgeschrieben (neuer Port, siehe unten).
+- **D4** — `POST /sessions/{id}/attempts` liefert Outcome, Score, `feedback.explanation`,
+  `feedback.chosenOptionRationale` (typspezifisch, siehe `ResponseGrader`), `feedback.evidence`
+  (ganzer zitierter Chunk + Seite — Items zitieren immer einen kompletten Chunk, kein Sub-Zitat,
+  siehe Epic-C-`GenerationPipeline`) sowie `learnerUpdate` und das nächste Item — alles synchron,
+  kein LLM-Call (N1).
+- **D5** — FSRS-Scheduling (ADR-006, `adaptivity.internal.engine.FsrsEngine`): Difficulty/Stability/
+  Retrievability, Grade aus dem Score abgeleitet (§11.4-Tabelle). Fälligkeiten über
+  `GET /api/v1/progress/due`.
+- **D6** — `POST /sessions/{id}/skip { itemId, reason }`: kein Elo-/FSRS-Update (θ unverändert),
+  aber `items.skip_count` (neue Spalte, analog `report_count`) als Item-Qualitätssignal.
+- **D7** — `GET /api/v1/progress/overview|concepts|due`: Beherrschungsgrad (`mastery`) ist bewusst
+  `EloEngine.successProbability(θ, 0)` — die Erfolgswahrscheinlichkeit gegen ein Item
+  durchschnittlicher Schwierigkeit, erklärbar (P4) statt einer separaten Formel.
+- **D8** — Kein eigener Code: `GET /sessions/{id}/next` ist bereits ein reiner, seiteneffektfreier
+  Peek (Prefetch), und Attempts sind ohnehin append-only — das erfüllt die Backend-Voraussetzung
+  für Offline-Sync strukturell. Tatsächliches Offline-Caching ist Client-Sache; kein
+  Extension-/PWA-Client in diesem Repo (wie A2/B3). Prio `C`, keine weitere Arbeit investiert.
+- **D9** — Typ-Rotation: `learnwithme.adaptivity.selection.max-same-type-in-a-row` (Default 2)
+  verhindert in `ItemSelectionService`, dass derselbe Fragetyp zu oft in Folge kommt.
+
+### Architektur-Notizen (Epic D)
+
+- **Neuer `authoring.AuthoringApi`-Port** (in Epic C als offene Lücke vermerkt: „nachziehen, sobald
+  Epic D das braucht"). Liefert Payload bewusst als roher JSON-String (`payloadJson`) statt als
+  `ItemPayload` — dieser Typ ist `internal` (ADR-007), die Modulgrenze erlaubt nur den `type`-String
+  + JSON über den Port. `assessment.internal.grading.ResponseGrader` interpretiert den JSON-Payload
+  daher unabhängig von `authoring.internal.domain.ItemPayload` (kein Typ überquert die Grenze) —
+  gleicher Trick wie ADR-007 selbst, nur einmal zusätzlich angewendet.
+- **`adaptivity` kennt keine Items** (§6.3: „adaptivity kennt kein LLM" — hier zusätzlich: auch keine
+  `authoring`-Abhängigkeit). Item-Schwierigkeit geht als Parameter in `AdaptivityApi.recordAttempt`
+  hinein und als Wert wieder heraus; `assessment` schreibt sie über `AuthoringApi.updateCalibration`
+  zurück. Dadurch bleibt die Adaptionsmathematik isoliert testbar (P4) — siehe `EloEngineTest`,
+  `FsrsEngineTest`.
+- Die Item-Auswahl-Policy-Parameter (`target-success-probability`, `selection.*`) und die reinen
+  Elo/FSRS-Modellparameter (`elo.*`, `fsrs.*`) teilen sich die YAML-Wurzel `learnwithme.adaptivity.*`,
+  werden aber in zwei verschiedenen Modulen gebunden (`assessment.internal.config.SelectionProperties`
+  bzw. `adaptivity.internal.config.AdaptivityProperties`) — Auswahl-Policy ist Sache von `assessment`
+  (kennt Items), nicht von `adaptivity` (kennt keine Items).
+- **FSRS-Gewichte sind Näherungswerte.** Die Formeln (DSR-Modell, Retrievability-/Intervall-Formel)
+  sind nach der offenen FSRS-Spezifikation sauber nachimplementiert; der konkrete 15-Parameter-
+  Gewichtsvektor (`FsrsEngine.W`) ist unverifiziert gegen die Referenz-Testvektoren des
+  Open-Source-Projekts — genau die in Epic C offen gelassene Frage (§20 O-3). Vor Produktivbetrieb
+  verifizieren oder durch eine geprüfte Bibliothek ersetzen.
+- **`learner_concept_state` bekommt eine `workspace_id`-Spalte**, die PLAN.md §8.1 nicht vorsieht —
+  Abweichung für die zweite Mandanten-Verteidigungslinie (N9), konsistent mit jeder anderen
+  mandantenfähigen Tabelle in dieser Codebase.
+- `sessions.summary`/`attempts.response` sind `TEXT` statt `JSONB` — dieselbe Abwägung wie
+  `items.payload` (Epic C).
+- `attempts.item_type` ist denormalisiert aus `items.type`, um für die Typ-Rotation (D9) nicht pro
+  Attempt einen zusätzlichen `AuthoringApi`-Roundtrip zu brauchen.
+- `content.ChunkView` bekommt ein neues `pageFrom`-Feld (vorher nicht exponiert) — für die
+  Seitenangabe im Beleg (D4, §9.3 `evidence.page`).
+
+### Bewusste Vereinfachungen gegenüber PLAN.md §11.3 (Item-Auswahl)
+
+- **Kein Prerequisite-Graph-Filter.** `concepts.concept_relations` (PLAN §8.1) wird von keinem
+  Modul befüllt — Epic B extrahiert nur Frequenz-Konzepte, keine Relationen. Ein Filter ohne
+  Datenquelle wäre toter Code; nachziehen, sobald `knowledge` Relationen liefert.
+- **`MIXED`-Scope vereinfacht auf „fällige Konzepte".** Die volle Drei-Wege-Gewichtung (fällig 0.5 /
+  Sessionziel 0.3 / schwächste Konzepte 0.2) bräuchte eine workspace-weite Konzeptliste ohne
+  Source-Filter, die `KnowledgeApi` nicht anbietet (nur `listConcepts(sourceId)`).
+  `DUE_REVIEW` und `MIXED` verhalten sich aktuell identisch.
+- **Kein Paraphrase-Vorzug bei zuletzt falscher Antwort (E6).** Epic C generiert keine
+  Paraphrase-Varianten (`parent_item_id` bleibt ungenutzt) — nicht Teil von Epic D.
+- **Kein Antwortzeit-Signal** (§11.2: „< 20 % der Median-Zeit → r = 0.9" bzw. §11.4s „EASY *und
+  schnell*"). Bräuchte einen laufenden Median pro Item, den keine Story bisher verlangt — Score
+  kommt ausschließlich aus dem deterministischen Grading.
+- **`p_correct` (Item, empirisch) wird von Epic D nicht gepflegt** — dient laut Datenmodell-
+  Kommentar „nur Reports", keine Story braucht es. `AuthoringApi.updateCalibration` unterstützt es
+  (Parameter vorhanden), `AttemptService` übergibt aktuell `null`.
+- **`GET /progress/concepts` zeigt nur den aktuellen Stand, keinen Verlauf über Zeit** (Teil der
+  D7-AC). Bräuchte eine History-Tabelle/Aggregation über `attempts`, die hier nicht gebaut wurde.
+- Modulgrenzen weichen von der PLAN.md-§6.3-Tabelle ab: `assessment` hängt zusätzlich von
+  `knowledge`(API) (Konzeptliste für Scope `SOURCE`/`CONCEPT`-Progress) und `content`(API)
+  (Chunk-Zitat für Belege) ab — von `ApplicationModules.verify()` erlaubt (keine `internal`-Zugriffe,
+  keine Zyklen), nur von der informellen Tabelle in PLAN.md nicht vorgezeichnet.
+
+### Bekannte Lücken (Epic D)
+
+- Wie immer: kein Docker hier → Migration V6, `@SpringBootTest`, Testcontainers-Tests ungeprüft.
+  Getestet ist ausschließlich reine Domänenlogik ohne Spring-Kontext (`EloEngineTest`,
+  `FsrsEngineTest`, `ResponseGraderTest`), gleiches Muster wie Epic C.
+- N1 (p95 < 400 ms) und N4 (200 gleichzeitige Sessions) sind unverifiziert — kein Lasttest ohne
+  laufende Postgres-Instanz möglich.
+- `SHORT_ANSWER`/`NUMERIC`/`CATEGORIZATION` werden nicht gegradet (`ResponseGrader.grade` wirft
+  bei unbekanntem Typ) — konsistent mit Epic C, die diese Typen (Prio S/C) nicht generiert.
+- Softmax-Ziehung (§11.3 Schritt 4) nutzt `kotlin.random.Random.Default` (nicht injizierbar) —
+  für deterministische Tests der Selection-Policy müsste das später ein austauschbarer Port werden;
+  aktuell nur die reine Scoring-/Grading-Mathematik ist getestet, nicht die Zufallsauswahl selbst.
