@@ -479,14 +479,29 @@ Onboarding-UX und A/B-Rahmen bewusst ausgeklammert — brauchen echte Nutzer/Pro
   die eine Zeile des eigenen Workspace, und `psql -U learnwithme_app` ohne gesetzten
   `app.workspace_id` sieht `0` von `4` `sources`-Zeilen (default-deny), mit gesetztem Kontext
   exakt die `1` passende — bestätigt RLS wirkt wirklich, nicht nur syntaktisch.
-- **Testcontainers in dieser Windows-Sandbox nicht lauffähig** — Docker Desktops aktiver Kontext
-  (`desktop-linux`) nutzt einen anderen Named Pipe als Testcontainers' Default-Erkennung erwartet;
-  auch mit explizitem `docker.host` in `~/.testcontainers.properties` antwortet die Engine mit
-  einem leeren `400`-Stub (Docker-Desktop-interne Pipe-Multiplexing-Eigenheit). Kein Code-Fehler —
-  `LearnWithMeApplicationTests`, `RowLevelSecurityTest`, `BackupRestoreProbeTest` schlagen lokal
-  mit `ContainerFetchException` fehl, sollten aber reale Docker-Umgebungen (u.a. die
-  Ubuntu-GitHub-Actions-Runner von `backend-ci.yml`, wo Testcontainers bereits vor Epic G lief)
-  unverändert bestehen. Alle 84 übrigen Tests (inkl. `ModularityTest`) liefen unverändert grün.
+- **Testcontainers in dieser Windows-Sandbox lokal nicht lauffähig** — Docker Desktops aktiver
+  Kontext (`desktop-linux`) nutzt einen anderen Named Pipe als Testcontainers' Default-Erkennung
+  erwartet; auch mit explizitem `docker.host` in `~/.testcontainers.properties` antwortet die
+  Engine mit einem leeren `400`-Stub (Docker-Desktop-interne Pipe-Multiplexing-Eigenheit). Kein
+  Code-Fehler, rein lokale Windows-Einschränkung — auf den Ubuntu-Runnern von `backend-ci.yml`
+  liefen alle drei neuen Tests (`LearnWithMeApplicationTests`, `RowLevelSecurityTest`,
+  `BackupRestoreProbeTest`) sowie `ModularityTest`/ArchUnit letztlich grün (drei Nachbesserungen
+  nötig, direkt auf `main` nachgezogen, siehe unten).
+- **Drei reale Bugs erst durch CI gefunden, nicht durch lokale Verifikation** — zeigt den Wert
+  eines echten Docker-fähigen CI-Laufs über die Sandbox-Grenze hinaus:
+  1. `V9`s `GRANT CONNECT ON DATABASE learnwithme` hartkodierte den Datenbanknamen — passt nur zu
+     `compose.yaml`s Dev-Setup, nicht zu Testcontainers' Default-Namen `test`. Fix: `current_database()`
+     per `EXECUTE format(...)`.
+  2. `spring.flyway.*` in `application.yml` (Owner-Rolle, getrennt von `spring.datasource.*` =
+     `learnwithme_app`) wird von `@ServiceConnection` nicht überschrieben, wenn explizit gesetzt —
+     `AbstractIntegrationTest` setzt daher beide Verbindungen selbst per `@DynamicPropertySource`
+     und verzichtet bewusst auf `@ServiceConnection`.
+  3. **Testcontainers-"Singleton-Container"-Falle**: `@Container` bindet Start/Stop an die
+     JUnit-Extension der jeweiligen Testklasse: bei einer in `AbstractIntegrationTest`s
+     Companion-Object geteilten Container-Instanz stoppte das den Container nach der ersten
+     Subklasse, obwohl eine zweite (`RowLevelSecurityTest`) ihn danach noch brauchte
+     (`ConnectException`). Fix: kein `@Container`/`@Testcontainers` mehr — manuelles `.start()`
+     bei Companion-Object-Initialisierung (offizielles Testcontainers-Muster für genau diesen Fall).
 
 ### Bekannte Lücken (Epic G)
 
@@ -496,7 +511,5 @@ Onboarding-UX und A/B-Rahmen bewusst ausgeklammert — brauchen echte Nutzer/Pro
   Subquery-basierter Policy-Ausbau in Epic G — die zehn direkt betroffenen Tabellen sind die mit
   dem höchsten Wert (Credentials, Nutzungsdaten, Lernfortschritt).
 - **Quota-TOCTOU-Fenster** (siehe oben) bewusst nicht geschlossen — dokumentiert statt gebaut.
-- **Testcontainers-Tests lokal auf diesem Windows/Docker-Desktop-Setup nicht verifizierbar**
-  (siehe oben) — Verifikation stattdessen über den echten laufenden Dev-Stack + `psql` erbracht.
 - **N4 (Lasttest), Onboarding-UX, A/B-Rahmen** nicht Teil dieses Zuschnitts — brauchen echte
   Nutzer bzw. Prod-nahe Infrastruktur, kein sinnvoller Solo-Dev-Story-Bedarf jetzt.
