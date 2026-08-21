@@ -4,10 +4,21 @@ spring:
   profiles:
     default: local
 
+  # Anwendungsverkehr (JPA/Hikari, per `TenantAwareDataSource` RLS-fähig) läuft NICHT als der
+  # DB-Bootstrap-Superuser, sondern als die von Migration V9 angelegte, unprivilegierte Rolle
+  # `learnwithme_app` — sonst würde RLS (N9) stillschweigend wirkungslos bleiben (Superuser
+  # umgehen RLS immer). Migrationen (unten, `spring.flyway.*`) laufen weiterhin als Owner/
+  # Bootstrap-Superuser, da nur der `learnwithme_app` überhaupt erst anlegen kann.
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/learnwithme}
-    username: ${DB_USER:learnwithme}
-    password: ${DB_PASSWORD:learnwithme}
+    username: ${DB_APP_USER:learnwithme_app}
+    password: ${DB_APP_PASSWORD:learnwithme_app_dev}
+    hikari:
+      # Verhindert einen Start-Wettlauf mit Flyway: `learnwithme_app` existiert erst, nachdem
+      # V9 gelaufen ist. Ohne dies würde Hikari beim Pool-Aufbau eine sofortige
+      # Verbindungsprüfung erzwingen und der Kontextstart schlüge fehl, falls diese (durch
+      # Bean-Reihenfolge nicht garantiert) vor Flyway passiert.
+      initialization-fail-timeout: -1
 
   jpa:
     open-in-view: false        # Lazy Loading im Controller ist eine Fehlerquelle, nicht ein Feature
@@ -21,6 +32,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/learnwithme}
+    user: ${DB_USER:learnwithme}
+    password: ${DB_PASSWORD:learnwithme}
 
   servlet:
     multipart:

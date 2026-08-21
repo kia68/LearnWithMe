@@ -25,6 +25,7 @@ class OcrTriggerService(
         return jobQueue.enqueue(
             JobType.OCR,
             "ocr:${source.id}:${System.currentTimeMillis()}",
+            workspaceId,
             mapOf("sourceId" to source.id.toString()),
         )
     }

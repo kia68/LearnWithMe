@@ -25,6 +25,6 @@ class ItemGenerationTriggerService(
             "count" to count,
             "types" to types.map { it.name },
         )
-        return jobQueue.enqueue(JobType.GENERATE_ITEMS, "generate:$conceptId:${System.currentTimeMillis()}", payload)
+        return jobQueue.enqueue(JobType.GENERATE_ITEMS, "generate:$conceptId:${System.currentTimeMillis()}", workspaceId, payload)
     }
 }

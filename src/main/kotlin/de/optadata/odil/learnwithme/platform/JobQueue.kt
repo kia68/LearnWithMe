@@ -8,5 +8,5 @@ import java.util.UUID
  * `enqueue` dessen ID zurück, statt einen weiteren Job anzulegen (z.B. Doppelklick auf Upload).
  */
 interface JobQueue {
-    fun enqueue(type: JobType, jobKey: String, payload: Map<String, Any?>): UUID
+    fun enqueue(type: JobType, jobKey: String, workspaceId: UUID, payload: Map<String, Any?>): UUID
 }

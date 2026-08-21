@@ -72,6 +72,7 @@ class AnalyticsApiImpl(
             jobQueue.enqueue(
                 JobType.GENERATE_PARAPHRASE,
                 "paraphrase:$itemId",
+                workspaceId,
                 mapOf("workspaceId" to workspaceId.toString(), "originalItemId" to itemId.toString()),
             )
         }

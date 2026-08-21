@@ -1,6 +1,7 @@
 package de.optadata.odil.learnwithme.platform.internal.job
 
 import de.optadata.odil.learnwithme.platform.JobHandler
+import de.optadata.odil.learnwithme.shared.TenantContext
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
@@ -36,6 +37,7 @@ class JobWorker(
             return
         }
         try {
+            TenantContext.set(job.workspaceId)
             handler.handle(job.id, job.payload)
             job.status = JobStatus.DONE
             job.finishedAt = Instant.now()
@@ -43,6 +45,8 @@ class JobWorker(
         } catch (ex: Exception) {
             log.warn("Job {} ({}) fehlgeschlagen, Versuch {}", job.id, job.type, job.attempts, ex)
             fail(job, ex.message ?: ex.javaClass.simpleName)
+        } finally {
+            TenantContext.clear()
         }
     }
 

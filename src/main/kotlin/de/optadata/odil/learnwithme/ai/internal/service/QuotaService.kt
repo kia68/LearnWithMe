@@ -14,10 +14,15 @@ import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 
 /**
- * A6: hartes Monatslimit für Nutzer ohne eigenen API-Key. Diese Klasse liefert die
- * Quota-Prüfung/-Auskunft bereits vollständig; der Aufruf vor einem tatsächlichen
- * LLM-Call folgt erst mit dem `LlmGateway` in M1 (ADR-004) — vorher gibt es schlicht
- * keine LLM-Aufrufe, die begrenzt werden müssten.
+ * A6: hartes Monatslimit für Nutzer ohne eigenen API-Key. [assertWithinFreeQuota] wird vor
+ * jedem tatsächlichen LLM-Call aufgerufen ([SpringAiLlmGateway], [SpringAiEmbeddingGateway]).
+ *
+ * Bekannte Lücke (Epic G, akzeptiert): Prüfung und `usageRecorder.record(...)` sind nicht
+ * atomar — zwei nahezu gleichzeitige Calls desselben Workspace können beide die Prüfung
+ * bestehen, bevor einer seinen Verbrauch verbucht (TOCTOU). Ein Lock, der über den externen
+ * LLM-HTTP-Call gehalten würde, hätte ein größeres Risiko (Connection-Pool-Erschöpfung unter
+ * Last, N4) als das kleine, seltene Überschreitungsfenster bei einem 2-€-Monatsbudget — bei
+ * C-4 (Betriebsaufwand als Architekturkriterium) daher bewusst nicht gebaut.
  */
 @Service
 class QuotaService(

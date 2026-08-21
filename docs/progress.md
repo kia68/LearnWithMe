@@ -430,3 +430,73 @@ dem Kotlin-Backend — anderer Tech-Stack (React/TypeScript/Vite), ADR-011 folge
   `certificate_unknown`/PKIX-Fehler fehl — bestätigt als TLS-Proxy-Limitation der Umgebung
   (kein echtes HTTPS-Egress), keine Codeänderung nötig; der Job-Status-Übergang zu `FAILED` selbst
   funktionierte korrekt.
+
+## Epic G — Härtung (M5, Kern-Härtung)
+
+Branch: `epicG`. Kein eigenes lettered Epic in PLAN.md §18 — M5 („Härtung & Beta") ist dort als
+Meilenstein, nicht als Story-Tabelle, beschrieben. Umgesetzter Ausschnitt (Nutzerentscheidung):
+Postgres RLS (N9), Quota-Hard-Stop-Review (A6), Backup/Restore-Probe (N14). Lasttest (N4),
+Onboarding-UX und A/B-Rahmen bewusst ausgeklammert — brauchen echte Nutzer/Prod-Infra.
+
+- **RLS (N9, zweite Verteidigungslinie)** — Migration `V9__row_level_security.sql` aktiviert
+  `ENABLE`+`FORCE ROW LEVEL SECURITY` mit einer `workspace_id::text = current_setting('app.workspace_id', true)`-
+  Policy auf allen zehn Tabellen mit direkter `workspace_id`-Spalte (`ai_credentials`, `llm_usage`,
+  `sources`, `concepts`, `items`, `sessions`, `attempts`, `learner_concept_state`, `error_events`,
+  `misconceptions`). `TenantContext` (neues Thread-Local in `shared`) wird für HTTP-Anfragen von
+  `shared.web.TenantContextInterceptor` aus dem `TenantPrincipal` gesetzt und für Hintergrund-Jobs
+  von `JobWorker` aus dem (neuen) `jobs.workspace_id`; `shared.persistence.TenantAwareDataSource`
+  setzt `app.workspace_id` per `set_config(...)` bei jedem Connection-Checkout aus dem Pool
+  (`TenantAwareDataSourceBeanPostProcessor` umhüllt Boots auto-konfigurierte `DataSource`-Bean,
+  statt sie selbst zu bauen — bleibt so mit `@ServiceConnection` in Tests kompatibel).
+- **Quota-Hard-Stop (A6) überprüft** — `assertWithinFreeQuota` lief bereits vor jedem LLM-Call
+  (Completion *und* Embedding); die in Epic-A/B-Notizen dokumentierte Lücke war veraltet (Epic C
+  hatte es längst verdrahtet). Tatsächliche, verbliebene Lücke dokumentiert statt "gefixt":
+  Prüfung und `usageRecorder.record(...)` sind nicht atomar (TOCTOU) — siehe Kommentar an
+  `QuotaService`. Bewusst kein Lock über den externen LLM-HTTP-Call (Connection-Pool-Risiko
+  unter Last, N4, wiegt schwerer als das kleine Überschreitungsfenster bei 2 €/Monat).
+- **Backup/Restore-Probe (N14)** — `BackupRestoreProbeTest`: zwei Testcontainers-Postgres-Instanzen,
+  `pg_dump`/`psql`-Restore gegen das volle migrierte Schema inkl. eines echten pgvector-Werts;
+  vergleicht Zeilenzahlen und den Embedding-Text nach dem Restore. Kein Aufbau echter
+  PITR-Infrastruktur (kein Story-Bedarf).
+
+### Architektur-Notizen (Epic G)
+
+- **Postgres-Bootstrap-Superuser kann RLS nicht per Selbst-Demotion umgehen-fähig gemacht
+  werden** — erste (verworfene) Implementierung versuchte `ALTER ROLE <verbundene_rolle>
+  NOSUPERUSER` am Ende der Migration; Postgres verweigert das kategorisch für die
+  Bootstrap-Superuser-Rolle ("The bootstrap superuser must have the SUPERUSER attribute"),
+  unabhängig davon wer die Änderung anstößt. Superuser umgehen RLS *immer*, `FORCE` hin oder
+  her — ohne eine zweite, gewöhnliche Rolle wäre die gesamte RLS-Policy-Menge wirkungslos
+  gewesen, obwohl sie syntaktisch korrekt und aktiv ist (stiller, gefährlicher Blindgänger).
+  Lösung: V9 legt `learnwithme_app` (kein Superuser, kein Owner) an und grantet ihr DML-Rechte;
+  `spring.datasource.*` (JPA/Hikari/`TenantAwareDataSource`) läuft jetzt als diese Rolle,
+  `spring.flyway.*` bleibt bewusst getrennt auf der bisherigen Owner-/Superuser-Rolle für
+  Migrationen. `spring.datasource.hikari.initialization-fail-timeout=-1` verhindert einen
+  Start-Wettlauf (Hikari validiert sonst beim Bean-Aufbau sofort eine Verbindung, bevor
+  garantiert ist, dass Flyway `learnwithme_app` schon angelegt hat).
+- **End-to-end gegen den echten laufenden Dev-Stack verifiziert** (nicht nur Unit-Tests): nach
+  Neustart mit V9 — Login funktioniert, `GET /sources` liefert nach direktem SQL-Insert exakt
+  die eine Zeile des eigenen Workspace, und `psql -U learnwithme_app` ohne gesetzten
+  `app.workspace_id` sieht `0` von `4` `sources`-Zeilen (default-deny), mit gesetztem Kontext
+  exakt die `1` passende — bestätigt RLS wirkt wirklich, nicht nur syntaktisch.
+- **Testcontainers in dieser Windows-Sandbox nicht lauffähig** — Docker Desktops aktiver Kontext
+  (`desktop-linux`) nutzt einen anderen Named Pipe als Testcontainers' Default-Erkennung erwartet;
+  auch mit explizitem `docker.host` in `~/.testcontainers.properties` antwortet die Engine mit
+  einem leeren `400`-Stub (Docker-Desktop-interne Pipe-Multiplexing-Eigenheit). Kein Code-Fehler —
+  `LearnWithMeApplicationTests`, `RowLevelSecurityTest`, `BackupRestoreProbeTest` schlagen lokal
+  mit `ContainerFetchException` fehl, sollten aber reale Docker-Umgebungen (u.a. die
+  Ubuntu-GitHub-Actions-Runner von `backend-ci.yml`, wo Testcontainers bereits vor Epic G lief)
+  unverändert bestehen. Alle 84 übrigen Tests (inkl. `ModularityTest`) liefen unverändert grün.
+
+### Bekannte Lücken (Epic G)
+
+- **RLS deckt nur Tabellen mit direkter `workspace_id`-Spalte ab** — Kindtabellen ohne eigene
+  Spalte (`chunks`, `concept_evidence`, `item_options`, …) erben Schutz nur über die
+  Anwendungsschicht (Layer 1, join über die Elternzeile), nicht über eine eigene Policy. Kein
+  Subquery-basierter Policy-Ausbau in Epic G — die zehn direkt betroffenen Tabellen sind die mit
+  dem höchsten Wert (Credentials, Nutzungsdaten, Lernfortschritt).
+- **Quota-TOCTOU-Fenster** (siehe oben) bewusst nicht geschlossen — dokumentiert statt gebaut.
+- **Testcontainers-Tests lokal auf diesem Windows/Docker-Desktop-Setup nicht verifizierbar**
+  (siehe oben) — Verifikation stattdessen über den echten laufenden Dev-Stack + `psql` erbracht.
+- **N4 (Lasttest), Onboarding-UX, A/B-Rahmen** nicht Teil dieses Zuschnitts — brauchen echte
+  Nutzer bzw. Prod-nahe Infrastruktur, kein sinnvoller Solo-Dev-Story-Bedarf jetzt.

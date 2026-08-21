@@ -24,6 +24,9 @@ class JobEntity(
     @Column(nullable = false)
     val type: JobType,
 
+    @Column(name = "workspace_id", nullable = false)
+    val workspaceId: UUID,
+
     @Column(nullable = false)
     var payload: String,
 

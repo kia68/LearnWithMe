@@ -84,6 +84,6 @@ class SourceIngestionService(
     }
 
     private fun enqueueIngest(source: Source) {
-        jobQueue.enqueue(JobType.INGEST, "ingest:${source.id}", mapOf("sourceId" to source.id.toString()))
+        jobQueue.enqueue(JobType.INGEST, "ingest:${source.id}", source.workspaceId, mapOf("sourceId" to source.id.toString()))
     }
 }
