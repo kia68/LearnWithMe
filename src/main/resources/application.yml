@@ -35,6 +35,14 @@ spring:
   # Diese Werte sind nur die Plattform-Defaults. Pro Workspace können sie durch
   # BYOK-Credentials und ein eigenes Routing überschrieben werden (§13).
   ai:
+    # Sowohl der OpenAI- als auch der Ollama-Starter sind auf dem Klassenpfad (ADR-004:
+    # pluggable Provider). Ohne diese Auswahl konfigurieren beide unbedingt je ein
+    # `EmbeddingModel`-Bean (`@ConditionalOnProperty(havingValue=…, matchIfMissing=true)`,
+    # per Jar-Introspektion verifiziert — ADR-004 warnt selbst vor genau solchen Spring-AI-
+    # Bruchstellen), und `PgVectorStoreAutoConfiguration` findet zwei Kandidaten statt einem.
+    # Muss mit `ai-routing.embedding` (unten) übereinstimmen.
+    model:
+      embedding: openai
     openai:
       api-key: ${OPENAI_API_KEY:}
     anthropic:
