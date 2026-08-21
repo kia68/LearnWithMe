@@ -1,0 +1,65 @@
+name: Backend CI
+
+"on":
+  push:
+    branches: [main, epicA]
+    paths:
+      - "src/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Testcontainers (Postgres) braucht den Docker-Daemon des Runners direkt —
+    # kein separater `services:`-Block nötig.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile
+        run: ./gradlew compileKotlin compileTestKotlin --console=plain
+
+      - name: Unit & integration tests
+        run: ./gradlew test --console=plain
+
+      - name: Architecture tests (Modulith + ArchUnit)
+        run: ./gradlew architectureTest --console=plain
+
+      - name: Build jar
+        run: ./gradlew assemble --console=plain
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: build/reports/tests/
+          retention-days: 7

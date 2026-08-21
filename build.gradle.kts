@@ -10,6 +10,13 @@ group = "de.optadata.odil"
 version = "0.0.1-SNAPSHOT"
 description = "LearnWithMe — adaptive, KI-gestützte Lernplattform"
 
+// Der Projektordner liegt unter OneDrive. OneDrives Sync-Prozess hält Datei-Handles auf
+// build/-Artefakte offen und blockiert dadurch Gradle-Rebuilds ("Unable to delete directory").
+// Build-Output deshalb außerhalb des synchronisierten Baums ablegen.
+System.getenv("LOCALAPPDATA")?.let { localAppData ->
+    layout.buildDirectory.set(file("$localAppData/gradle-builds/learnWithMe"))
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
@@ -40,6 +47,7 @@ dependencies {
     // ── Sicherheit ───────────────────────────────────────────────────────────
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.oauth2.rs)
+    implementation(libs.spring.boot.starter.oauth2.client)   // Google/GitHub Code-Exchange (A1)
 
     // ── Persistenz ───────────────────────────────────────────────────────────
     implementation(libs.spring.boot.starter.data.jpa)

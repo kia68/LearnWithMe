@@ -27,6 +27,10 @@ spring:
       max-file-size: 100MB     # B1
       max-request-size: 110MB
 
+  mvc:
+    problemdetails:
+      enabled: true             # RFC 9457 application/problem+json (§9.1)
+
   # ── KI (ADR-004/ADR-010) ────────────────────────────────────────────────────
   # Diese Werte sind nur die Plattform-Defaults. Pro Workspace können sie durch
   # BYOK-Credentials und ein eigenes Routing überschrieben werden (§13).
@@ -63,6 +67,20 @@ springdoc:
 
 # ── Anwendungseigene Konfiguration ────────────────────────────────────────────
 learnwithme:
+  security:
+    # Dev-KEK für die BYOK-Envelope-Verschlüsselung (ADR-009). 32 Byte, Base64.
+    # Ohne gesetzten Wert wird beim Start ein zufälliger KEK erzeugt — Credentials
+    # überstehen dann keinen Neustart. Produktion braucht ein echtes KMS/Vault.
+    dev-kek-base64: ${DEV_KEK_BASE64:}
+
+  sso:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+    github:
+      client-id: ${GITHUB_CLIENT_ID:}
+      client-secret: ${GITHUB_CLIENT_SECRET:}
+
   storage:
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
     bucket: ${S3_BUCKET:learnwithme}
