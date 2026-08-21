@@ -513,3 +513,96 @@ Onboarding-UX und A/B-Rahmen bewusst ausgeklammert — brauchen echte Nutzer/Pro
 - **Quota-TOCTOU-Fenster** (siehe oben) bewusst nicht geschlossen — dokumentiert statt gebaut.
 - **N4 (Lasttest), Onboarding-UX, A/B-Rahmen** nicht Teil dieses Zuschnitts — brauchen echte
   Nutzer bzw. Prod-nahe Infrastruktur, kein sinnvoller Solo-Dev-Story-Bedarf jetzt.
+
+## Epic H — SHORT_ANSWER & Freitext-Rubric-Bewertung (löst E4)
+
+Branch: `epicH`. Siebter Fragetyp (§10.1), löst die in Epic E dokumentierte Blockade: E4
+("Freitextantwort gegen Rubric bewerten") brauchte `SHORT_ANSWER`-Items, die es vorher nicht gab.
+
+- **Neuer Fragetyp `SHORT_ANSWER`** — `authoring.internal.domain.ShortAnswerPayload
+  (rubric[{criterion,points}], referenceAnswer)`, vollständig in `PayloadCodec`/`PromptBuilder`/
+  `GenerationPipeline`/`ItemDrafts` verdrahtet (Kotlins exhaustive `when` hat jede fehlende Stelle
+  beim Compilieren gefunden, ADR-007 zahlt sich hier aus). `ItemType.entries` wird an mehreren
+  Stellen bereits generisch iteriert (`GenerateItemsJobHandler`s Typ-Rotation) — dort war *keine*
+  Änderung nötig.
+- **Asynchrones LLM-Rubric-Grading (E4)** — `ResponseGrader` bleibt bewusst LLM-frei (N1);
+  `SHORT_ANSWER` verzweigt in `AttemptService.submit` VOR dem Grader in einen neuen
+  `GRADE_FREE_TEXT`-Job. `POST /sessions/{id}/attempts` liefert dafür **202** statt 200 (gleiches
+  Muster wie `POST /sources`) mit dem nächsten Item sofort dabei (optimistisches UI, §6.5 —
+  „Freitext-Bewertung … asynchron mit optimistischem UI"). Der Nutzer wartet nie auf das
+  LLM-Ergebnis, um weiterzumachen.
+  - `assessment.internal.grading.FreeTextGrader`: `LlmTask.FREE_TEXT_GRADING` (seit Epic C in
+    `ai-routing` vorprovisioniert, bis jetzt unkonsumiert). Positionale statt namensbasierte
+    Rückgabe (`awardedPoints: List<Int>` in Rubric-Reihenfolge, kein `criterion`-Textabgleich) —
+    robuster gegen ein Modell, das die Kriteriums-Formulierung beim Zurückgeben leicht abwandelt
+    (PLAN.md A-4: „Structured Output bei kleinen Modellen unzuverlässig").
+  - `assessment.internal.job.GradeFreeTextJobHandler`: ruft den Grader, hängt die
+    Kriterium-für-Kriterium-Punktzahlen lesbar vor den LLM-Verbesserungshinweis (PLAN.md §4.2 E4:
+    „Rubric ist dem Nutzer sichtbar" — ohne weiteren DTO-Ausbau) und ruft dann `AttemptService`s
+    normale Verbuchung (Elo/FSRS/Fehleranalyse) nach.
+  - `GET /sessions/{id}/items/{itemId}/grade` (neu): Poll-Ziel für den Client, `"PENDING"` bis
+    `attempts.feedback` (neue, nur für `SHORT_ANSWER` befüllte Spalte, Migration V10) und die
+    zugehörige `Attempt`-Zeile existieren.
+- **Web-App**: `ShortAnswerItem.tsx` (Textarea), `SessionPage.tsx` pollt alle 2,5 s (max. 30×) nach
+  einem 202 und zeigt währenddessen/danach einen kleinen Status-Badge — blockiert aber nie den
+  nächsten Schritt.
+
+### Architektur-Notizen (Epic H)
+
+- **`Attempt` bleibt echt append-only (N14)** — die naheliegende „erst PENDING speichern, dann
+  UPDATEn"-Idee wurde verworfen: `Attempt` hat bewusst nur `val`-Felder. Für `SHORT_ANSWER` wird
+  stattdessen *gar keine* Zeile geschrieben, bis das Grade-Ergebnis feststeht — `GradeFreeTextJobHandler`
+  ruft dieselbe `finalize()`-Logik wie der synchrone Pfad erst nach dem LLM-Call auf. Das Polling
+  fragt direkt `attempts` ab: keine Zeile heißt `"PENDING"`, eine Zeile heißt `"GRADED"`.
+- **Sicherheitsfund während der eigenen Live-Verifikation: `referenceAnswer` ging unverändert an
+  den Client.** `SessionController`s `SelectedItem?.toResponse()` reicht den gespeicherten
+  Item-Payload roh weiter — bei MC-Typen liegt die Lösung in einem Array aus mehreren Optionen
+  vergraben, bei `SHORT_ANSWER` wäre es ein einzelnes, klar benanntes Top-Level-JSON-Feld, trivial
+  im Network-Tab lesbar und die ganze Frage sinnlos machend. Für `SHORT_ANSWER` jetzt gezielt
+  gefiltert (`referenceAnswer` entfernt, `rubric` bleibt laut PLAN.md sichtbar). Das allgemeinere
+  Muster (Antwort-tragende Felder gehen bei JEDEM Typ ungefiltert an den Client, nur von der UI
+  nicht gerendert) ist **nicht** Teil dieser Änderung — siehe „Bekannte Lücken" unten.
+- **End-to-end gegen den echten laufenden Dev-Stack verifiziert**, inklusive des einzigen Teils,
+  der ohne echten LLM-Zugriff nicht vollständig durchlaufbar ist: `POST attempts` auf ein
+  `SHORT_ANSWER`-Item lieferte real `202` mit korrekt gefiltertem `next`; `GET .../grade` lieferte
+  `"PENDING"`; der `GRADE_FREE_TEXT`-Job wurde real eingereiht, dreimal versucht (`JobWorker`s
+  reguläre Retry-Politik) und scheiterte mit exakt der erwarteten `CredentialResolver`-Meldung
+  („Kein Plattform-OpenAI-Key konfiguriert … und kein verifiziertes BYOK-Credential vorhanden") —
+  beweist, dass die gesamte Kette bis zur Grenze des echten LLM-Calls korrekt verdrahtet ist; die
+  Grenze selbst ist die seit Epic F bekannte TLS-Proxy-Einschränkung dieser Sandbox.
+- **Backend-Neustarts in dieser Session ungewöhnlich instabil** — das experimentelle
+  `loom-ea-25-loom+1-11`-JDK (bereits in Epic G als bekannte Einschränkung dokumentiert) crashte
+  hier viermal in Folge beim Start, obwohl es in Epic G 39 Minuten am Stück lief; vermutlich
+  akkumulierter Ressourcendruck nach dieser sehr langen Session (viele parallel gehaltene
+  Gradle-Daemons, IDE-Sprachserver, Docker-Container). Kein Code-Zusammenhang — nach `--stop`
+  aller Daemons und einem freien Port 8080 lief der Neustart durch.
+- **`packages/api-client` nicht neu generiert** — bräuchte einen durchgehend laufenden Backend-
+  Prozess für `scripts/generate-api-client.mjs`, den die obige Instabilität verhinderte. Die neuen
+  Typen (`ShortAnswerPayload`, `PendingAttemptResponse`, `GradeStatusResponse`) sind im Web-App-Code
+  von Hand nachgezogen (`items/types.ts`, `SessionPage.tsx`-Kommentare markieren die Stellen) und
+  `GET .../grade` läuft über einen rohen, aber authentifizierten `fetch` (`api/client.ts:authFetch`),
+  da `openapi-fetch`s `paths`-Typ den neuen Endpunkt noch nicht kennt. Bei nächster Gelegenheit
+  `npm run generate-client` gegen einen laufenden Server nachholen und beides ersetzen.
+
+### Bekannte Lücken (Epic H)
+
+- **Client-seitiges Leaken von Antwort-tragenden Payload-Feldern ist ein systemisches, nicht nur
+  `SHORT_ANSWER`-spezifisches Muster** (siehe oben) — bei MC_SINGLE/MC_MULTI trägt schon das an
+  den Client gehende `next.payload` `options[].correct`/`.rationale`/`.misconceptionCategory` für
+  JEDE Option, nicht nur die Sicht vor der Antwort. Kein neuer Fehler durch Epic H, aber durch die
+  eigene Verifikation hier konkret entdeckt und bestätigt — verdient eine eigene, typübergreifende
+  Härtungs-Story (Payload-Filterung beim Ausliefern von `next` für alle sieben Typen), bewusst
+  nicht in dieser Änderung mit erledigt, um den Zuschnitt nicht zu sprengen.
+- **Job-Fehlschlag wird dem Client nie sichtbar gemacht** — schlägt `GRADE_FREE_TEXT` nach drei
+  Versuchen endgültig fehl (wie hier real beobachtet), bleibt `GET .../grade` für immer bei
+  `"PENDING"` stehen, ohne dass die Antwort selbst verloren geht (der Job-Fehler steht in
+  `jobs.last_error`). Kein Zeitlimit/Fehlerstatus im Polling-Endpunkt — bewusst einfach gehalten
+  (C-4), ein Timeout auf Client-Seite (30 Versuche × 2,5 s) verhindert wenigstens endloses Pollen.
+- **Session-Finish vor abgeschlossenem Grading**: `POST /sessions/{id}/finish` zählt nur bereits
+  persistierte `Attempt`-Zeilen — beendet ein Nutzer die Session, bevor `GRADE_FREE_TEXT`
+  durchgelaufen ist, fehlt dieser eine Versuch in der beim Beenden gezeigten Zusammenfassung
+  (`attemptCount`/`accuracy`). Die Daten selbst gehen nicht verloren (`finalizeShortAnswerGrade`
+  prüft `session.endedAt` nicht und schreibt trotzdem), nur die schon angezeigte Zusammenfassung
+  bleibt stehen. Seltener Fall (Job braucht normalerweise Sekunden), keine Korrektur gebaut.
+- **Extension** unverändert — `SHORT_ANSWER` fällt automatisch in den bereits bestehenden
+  „nicht inline unterstützt, auf Web-App verlinken"-Zweig (wie ORDERING/MATCHING/CLOZE).

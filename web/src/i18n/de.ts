@@ -79,6 +79,14 @@ const de = {
   "item.matching.instructions": "Ordne jedem linken Element ein rechtes zu.",
   "item.matching.unmatched": "— auswählen —",
   "item.cloze.instructions": "Fülle die Lücken aus.",
+  "item.shortAnswer.label": "Deine Antwort",
+  "item.shortAnswer.placeholder": "Antwort eingeben …",
+  "item.shortAnswer.grading": "Wird bewertet …",
+
+  "session.pendingGrade": "Vorherige Antwort wird noch bewertet …",
+  "session.gradedCorrect": "Vorherige Antwort: richtig ({score}%).",
+  "session.gradedPartial": "Vorherige Antwort: teilweise richtig ({score}%).",
+  "session.gradedIncorrect": "Vorherige Antwort: leider falsch ({score}%).",
 
   "progress.title": "Fortschritt",
   "progress.overview": "Übersicht",

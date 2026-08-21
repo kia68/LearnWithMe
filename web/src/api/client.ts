@@ -26,3 +26,15 @@ export const api = createApiClient({
   getAccessToken: () => accessToken,
   onUnauthorized: () => unauthorizedHandler?.(),
 });
+
+/** Epic H: `GET .../items/{itemId}/grade` fehlt noch im generierten `paths`-Typ (siehe
+ * items/types.ts-Kommentar) — `api.GET` würde diesen Pfad-String zur Compile-Zeit ablehnen.
+ * Roher, aber authentifizierter Fetch als Übergangslösung; bei der nächsten Client-Regenerierung
+ * durch einen normalen `api.GET`-Aufruf ersetzen. */
+export async function authFetch(path: string): Promise<Response> {
+  const headers = new Headers();
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, { headers });
+  if (response.status === 401) unauthorizedHandler?.();
+  return response;
+}

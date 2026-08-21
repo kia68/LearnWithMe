@@ -3,8 +3,18 @@ import ClozeItem from "./ClozeItem";
 import MatchingItem from "./MatchingItem";
 import McChoice from "./McChoice";
 import OrderingItem from "./OrderingItem";
+import ShortAnswerItem from "./ShortAnswerItem";
 import TrueFalseItem from "./TrueFalseItem";
-import type { ClozePayload, ItemResponseBody, MatchingPayload, McMultiPayload, McSinglePayload, OrderingPayload, TrueFalsePayload } from "./types";
+import type {
+  ClozePayload,
+  ItemResponseBody,
+  MatchingPayload,
+  McMultiPayload,
+  McSinglePayload,
+  OrderingPayload,
+  ShortAnswerPayload,
+  TrueFalsePayload,
+} from "./types";
 
 export interface ItemRendererProps {
   type: string;
@@ -32,6 +42,8 @@ export default function ItemRenderer({ type, payload, disabled, correctResponse,
       return <MatchingView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
     case "CLOZE":
       return <ClozeView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
+    case "SHORT_ANSWER":
+      return <ShortAnswerView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
     default:
       return <p role="alert">Unbekannter Fragetyp: {type}</p>;
   }
@@ -134,6 +146,20 @@ function ClozeView({
   const [answers, setAnswers] = useState<string[]>(() => payload.blanks.map(() => ""));
   useEffect(() => onResponseChange({ answers }), [answers, onResponseChange]);
   return <ClozeItem payload={payload} answers={answers} onChange={setAnswers} disabled={disabled} />;
+}
+
+function ShortAnswerView({
+  payload,
+  disabled,
+  onResponseChange,
+}: {
+  payload: ShortAnswerPayload;
+  disabled: boolean;
+  onResponseChange: (r: ItemResponseBody | null) => void;
+}) {
+  const [answer, setAnswer] = useState("");
+  useEffect(() => onResponseChange(answer.trim() ? { answer } : null), [answer, onResponseChange]);
+  return <ShortAnswerItem payload={payload} value={answer} onChange={setAnswer} disabled={disabled} />;
 }
 
 function extractOptionIds(correctResponse: unknown, key: "optionId" | "optionIds"): string[] | undefined {

@@ -32,6 +32,8 @@ object PromptBuilder {
             """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "left": [{"id","text"}, ...], "right": [{"id","text"}, ...], "pairs": [{"leftId","rightId"}, ...], "distractorsRight": [{"id","text"}, ...]}. Mindestens 3 Paare; distractorsRight sind optionale rechte Einträge ohne Paar (Ablenker)."""
         ItemType.CLOZE ->
             """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "template": "Lückentext mit {{1}}, {{2}}, ...", "blanks": [{"accepted": [string, ...]}, ...]}. Platzhalter-Nummerierung beginnt bei 1 und ist lückenlos fortlaufend."""
+        ItemType.SHORT_ANSWER ->
+            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "rubric": [{"criterion": string, "points": int}, ...], "referenceAnswer": string}. Mindestens EIN Rubric-Kriterium mit points > 0; referenceAnswer ist eine vollständige Musterantwort, gegen die eine Freitextantwort später bewertet wird."""
     }
 
     fun userPrompt(conceptName: String, conceptSummary: String, chunkText: String): String = buildString {

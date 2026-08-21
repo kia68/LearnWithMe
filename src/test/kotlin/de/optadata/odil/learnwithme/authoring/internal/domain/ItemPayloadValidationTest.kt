@@ -97,4 +97,31 @@ class ItemPayloadValidationTest {
         )
         payload.validate(2.0).any { it.code == "UNKNOWN_PAIR_REFERENCE" } shouldBe true
     }
+
+    @Test
+    fun `valid SHORT_ANSWER has no issues`() {
+        val payload = ShortAnswerPayload(
+            rubric = listOf(RubricCriterion("Nennt ACID korrekt", 2), RubricCriterion("Erklärt Konsistenz", 1)),
+            referenceAnswer = "ACID steht für Atomicity, Consistency, Isolation, Durability.",
+        )
+        payload.validate(2.0).size shouldBe 0
+    }
+
+    @Test
+    fun `SHORT_ANSWER with an empty rubric is rejected`() {
+        val payload = ShortAnswerPayload(rubric = emptyList(), referenceAnswer = "Musterantwort")
+        payload.validate(2.0).any { it.code == "EMPTY_RUBRIC" } shouldBe true
+    }
+
+    @Test
+    fun `SHORT_ANSWER with a non-positive criterion score is rejected`() {
+        val payload = ShortAnswerPayload(rubric = listOf(RubricCriterion("Kriterium", 0)), referenceAnswer = "Musterantwort")
+        payload.validate(2.0).any { it.code == "INVALID_POINTS" } shouldBe true
+    }
+
+    @Test
+    fun `SHORT_ANSWER with a blank reference answer is rejected`() {
+        val payload = ShortAnswerPayload(rubric = listOf(RubricCriterion("Kriterium", 1)), referenceAnswer = "  ")
+        payload.validate(2.0).any { it.code == "EMPTY_REFERENCE_ANSWER" } shouldBe true
+    }
 }

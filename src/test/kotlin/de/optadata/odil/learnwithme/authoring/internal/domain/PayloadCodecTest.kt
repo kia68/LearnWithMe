@@ -32,4 +32,16 @@ class PayloadCodecTest {
 
         decoded shouldBe payload
     }
+
+    @Test
+    fun `round-trips ShortAnswerPayload`() {
+        val payload = ShortAnswerPayload(
+            rubric = listOf(RubricCriterion("Nennt ACID korrekt", 2), RubricCriterion("Erklärt Konsistenz", 1)),
+            referenceAnswer = "ACID steht für Atomicity, Consistency, Isolation, Durability.",
+        )
+
+        val decoded = PayloadCodec.deserialize(ItemType.SHORT_ANSWER, PayloadCodec.serialize(payload))
+
+        decoded shouldBe payload
+    }
 }

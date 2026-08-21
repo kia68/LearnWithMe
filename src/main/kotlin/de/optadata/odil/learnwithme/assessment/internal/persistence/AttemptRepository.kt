@@ -15,4 +15,8 @@ interface AttemptRepository : JpaRepository<Attempt, Long> {
 
     /** D8-Zusammenfassung (`POST /sessions/{id}/finish`). */
     fun findAllBySessionId(sessionId: UUID): List<Attempt>
+
+    /** Epic H: Polling-Ziel für den asynchronen `SHORT_ANSWER`-Grade — `null`, solange
+     * `GradeFreeTextJobHandler` den Attempt noch nicht persistiert hat. */
+    fun findFirstBySessionIdAndItemIdOrderByCreatedAtDesc(sessionId: UUID, itemId: UUID): Attempt?
 }

@@ -6,6 +6,7 @@ import de.optadata.odil.learnwithme.authoring.internal.domain.MatchingItem
 import de.optadata.odil.learnwithme.authoring.internal.domain.MatchingPair
 import de.optadata.odil.learnwithme.authoring.internal.domain.Option
 import de.optadata.odil.learnwithme.authoring.internal.domain.OrderingElement
+import de.optadata.odil.learnwithme.authoring.internal.domain.RubricCriterion
 
 /**
  * Flache, typspezifische LLM-Antwortstruktur pro [de.optadata.odil.learnwithme.authoring.internal.domain.ItemType]
@@ -50,4 +51,12 @@ data class ClozeDraft(
     val bloomLevel: BloomLevel,
     val template: String,
     val blanks: List<ClozeBlank>,
+)
+
+data class ShortAnswerDraft(
+    val stem: String,
+    val explanation: String,
+    val bloomLevel: BloomLevel,
+    val rubric: List<RubricCriterion>,
+    val referenceAnswer: String,
 )

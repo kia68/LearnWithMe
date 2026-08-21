@@ -11,7 +11,10 @@ import kotlin.math.max
  * `authoring.internal.domain.ItemPayload` — die Modulgrenze (§6.3) erlaubt `assessment` nur den
  * öffentlichen `AuthoringApi`-Port, der den Payload als rohen JSON-String liefert (ADR-007-Analogon:
  * Typ-Dispatch über den `type`-String statt über einen Kotlin-Typ, der die Grenze überqueren müsste).
- * Kein LLM im Pfad (N1) — SHORT_ANSWER/NUMERIC/CATEGORIZATION sind ohnehin nicht Teil des MVP (Epic C).
+ * Kein LLM im Pfad (N1) — deshalb bewusst OHNE SHORT_ANSWER (Epic H): dessen Rubric-Bewertung
+ * braucht zwingend einen LLM-Call und läuft daher asynchron über
+ * assessment.internal.job.GradeFreeTextJobHandler, nicht hier — AttemptService.submit verzweigt
+ * vor diesem Grader dorthin. NUMERIC/CATEGORIZATION bleiben weiterhin ohne Story-Bedarf.
  */
 @Component
 class ResponseGrader {
@@ -30,11 +33,7 @@ class ResponseGrader {
         }
     }
 
-    private fun outcomeFor(score: Float): AttemptOutcome = when {
-        score >= 0.999f -> AttemptOutcome.CORRECT
-        score <= 0.001f -> AttemptOutcome.INCORRECT
-        else -> AttemptOutcome.PARTIAL
-    }
+    private fun outcomeFor(score: Float): AttemptOutcome = outcomeForScore(score)
 
     private fun options(payload: JsonNode): List<JsonNode> = payload.path("options").toList()
 

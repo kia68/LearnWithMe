@@ -14,6 +14,7 @@ import de.optadata.odil.learnwithme.authoring.internal.domain.McMultiPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.McSinglePayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.OrderingPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.PayloadCodec
+import de.optadata.odil.learnwithme.authoring.internal.domain.ShortAnswerPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.TrueFalsePayload
 import de.optadata.odil.learnwithme.authoring.internal.persistence.ItemRepository
 import de.optadata.odil.learnwithme.authoring.internal.quality.DuplicateGate
@@ -181,6 +182,11 @@ class GenerationPipeline(
                 val result = llmGateway.complete(StructuredRequest(workspaceId, LlmTask.ITEM_GENERATION, system, user, ClozeDraft::class.java))
                 val d = result.value
                 DraftResult(d.stem, d.explanation, d.bloomLevel, ClozePayload(d.template, d.blanks)) to result.model
+            }
+            ItemType.SHORT_ANSWER -> {
+                val result = llmGateway.complete(StructuredRequest(workspaceId, LlmTask.ITEM_GENERATION, system, user, ShortAnswerDraft::class.java))
+                val d = result.value
+                DraftResult(d.stem, d.explanation, d.bloomLevel, ShortAnswerPayload(d.rubric, d.referenceAnswer)) to result.model
             }
         }
     }

@@ -128,3 +128,19 @@ data class ClozePayload(val template: String, val blanks: List<ClozeBlank>) : It
         }
     }
 }
+
+/** [points] ist die maximale Punktzahl für dieses Kriterium — Grundlage für den Rubric-Score
+ * (Epic H, §10.1: `SHORT_ANSWER` → "rubric[{criterion,points}]"). */
+data class RubricCriterion(val criterion: String, val points: Int)
+
+data class ShortAnswerPayload(
+    val rubric: List<RubricCriterion>,
+    val referenceAnswer: String,
+) : ItemPayload {
+    override fun validate(maxOptionLengthVarianceRatio: Double) = buildList {
+        if (rubric.isEmpty()) add(ValidationIssue("EMPTY_RUBRIC", "SHORT_ANSWER braucht mindestens ein Rubric-Kriterium."))
+        if (rubric.any { it.criterion.isBlank() }) add(ValidationIssue("EMPTY_CRITERION", "Jedes Rubric-Kriterium braucht einen Text."))
+        if (rubric.any { it.points <= 0 }) add(ValidationIssue("INVALID_POINTS", "Jedes Rubric-Kriterium braucht points > 0."))
+        if (referenceAnswer.isBlank()) add(ValidationIssue("EMPTY_REFERENCE_ANSWER", "referenceAnswer darf nicht leer sein."))
+    }
+}

@@ -1,20 +1,25 @@
 package de.optadata.odil.learnwithme.assessment.internal.web
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import de.optadata.odil.learnwithme.assessment.internal.domain.Session
 import de.optadata.odil.learnwithme.assessment.internal.domain.SessionGoalKind
 import de.optadata.odil.learnwithme.assessment.internal.domain.SessionScopeKind
 import de.optadata.odil.learnwithme.assessment.internal.selection.SelectedItem
 import de.optadata.odil.learnwithme.assessment.internal.service.AttemptResult
 import de.optadata.odil.learnwithme.assessment.internal.service.AttemptService
+import de.optadata.odil.learnwithme.assessment.internal.service.GradeStatus
 import de.optadata.odil.learnwithme.assessment.internal.service.SessionService
 import de.optadata.odil.learnwithme.assessment.internal.service.SessionSummary
+import de.optadata.odil.learnwithme.assessment.internal.service.SubmitOutcome
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.ErrorAnalysisResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.EvidenceResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.FeedbackResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.FinishSessionResponse
+import de.optadata.odil.learnwithme.assessment.internal.web.dto.GradeStatusResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.ItemMeta
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.LearnerUpdateResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.NextItemResponse
+import de.optadata.odil.learnwithme.assessment.internal.web.dto.PendingAttemptResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.SessionResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.SkipRequest
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.SkipResponse
@@ -23,6 +28,12 @@ import de.optadata.odil.learnwithme.assessment.internal.web.dto.SubmitAttemptReq
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.SubmitAttemptResponse
 import de.optadata.odil.learnwithme.shared.JsonMapper
 import de.optadata.odil.learnwithme.shared.TenantPrincipal
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -61,13 +72,38 @@ class SessionController(
     fun next(@AuthenticationPrincipal principal: TenantPrincipal, @PathVariable id: UUID): NextItemResponse? =
         sessionService.peekNext(principal.workspaceId, id).toResponse()
 
+    /** Epic H: `SHORT_ANSWER` liefert 202 statt 200 (kein LLM im kritischen Pfad, N1) —
+     * `ResponseEntity<*>` löscht den Body-Typ für springdoc, deshalb hier explizit annotiert, damit
+     * der generierte TS-Client (ADR-011) beide Formen kennt statt nur eine (oder keine). */
+    @ApiResponses(
+        ApiResponse(responseCode = "200", content = [Content(schema = Schema(implementation = SubmitAttemptResponse::class))]),
+        ApiResponse(responseCode = "202", content = [Content(schema = Schema(implementation = PendingAttemptResponse::class))]),
+    )
     @PostMapping("/api/v1/sessions/{id}/attempts")
     fun submitAttempt(
         @AuthenticationPrincipal principal: TenantPrincipal,
         @PathVariable id: UUID,
         @RequestBody request: SubmitAttemptRequest,
-    ): SubmitAttemptResponse =
-        attemptService.submit(principal.workspaceId, principal.userId, id, request.itemId, request.response, request.elapsedMs).toResponse()
+    ): ResponseEntity<*> =
+        when (val outcome = attemptService.submit(principal.workspaceId, principal.userId, id, request.itemId, request.response, request.elapsedMs)) {
+            is SubmitOutcome.Graded -> ResponseEntity.ok(outcome.result.toResponse())
+            SubmitOutcome.Pending -> ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(PendingAttemptResponse(sessionService.peekNext(principal.workspaceId, id).toResponse()))
+        }
+
+    /** Epic H: Poll-Ziel nach einem 202 auf `POST attempts` (`SHORT_ANSWER`, async LLM-Rubric-Grading). */
+    @GetMapping("/api/v1/sessions/{id}/items/{itemId}/grade")
+    fun gradeStatus(
+        @AuthenticationPrincipal principal: TenantPrincipal,
+        @PathVariable id: UUID,
+        @PathVariable itemId: UUID,
+    ): GradeStatusResponse = when (val status = attemptService.gradeStatus(principal.workspaceId, id, itemId)) {
+        GradeStatus.Pending -> GradeStatusResponse("PENDING", null, null, null, null, null, null)
+        is GradeStatus.Graded -> {
+            val r = status.result.toResponse()
+            GradeStatusResponse("GRADED", r.attemptId, r.outcome, r.score, r.feedback, r.errorAnalysis, r.learnerUpdate)
+        }
+    }
 
     @PostMapping("/api/v1/sessions/{id}/skip")
     fun skip(@AuthenticationPrincipal principal: TenantPrincipal, @PathVariable id: UUID, @RequestBody request: SkipRequest): SkipResponse =
@@ -83,8 +119,16 @@ class SessionController(
     private fun Session.toResponse(next: NextItemResponse?) =
         SessionResponse(id, scopeKind.name, scopeId, goalKind.name, goalValue, startedAt, endedAt, next)
 
+    /** Epic H: `referenceAnswer` aus dem an den Client gehenden Payload entfernen — anders als bei
+     * den anderen Typen (wo die Lösung in einem Array aus mehreren Optionen versteckt liegt, siehe
+     * `docs/progress.md`-Notiz zur allgemeineren, hier bewusst nicht mit angegangenen Lücke) wäre
+     * das bei `SHORT_ANSWER` ein einzelnes, klar benanntes Top-Level-Feld — trivial im
+     * Network-Tab ablesbar und die ganze Frage sinnlos machend. `rubric` bleibt sichtbar (PLAN.md
+     * §4.2 E4 will das explizit). */
     private fun SelectedItem?.toResponse(): NextItemResponse? = this?.let {
-        NextItemResponse(it.itemId, it.type, it.stem, mapper.readValue(it.payloadJson, Any::class.java), ItemMeta(it.conceptId, it.expectedSuccess))
+        val payload = mapper.readTree(it.payloadJson)
+        if (payload is ObjectNode && it.type == "SHORT_ANSWER") payload.remove("referenceAnswer")
+        NextItemResponse(it.itemId, it.type, it.stem, mapper.convertValue(payload, Any::class.java), ItemMeta(it.conceptId, it.expectedSuccess))
     }
 
     private fun AttemptResult.toResponse(): SubmitAttemptResponse {

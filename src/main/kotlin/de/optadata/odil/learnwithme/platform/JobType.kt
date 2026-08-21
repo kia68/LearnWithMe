@@ -6,4 +6,5 @@ enum class JobType {
     OCR,
     GENERATE_ITEMS,
     GENERATE_PARAPHRASE,
+    GRADE_FREE_TEXT,
 }

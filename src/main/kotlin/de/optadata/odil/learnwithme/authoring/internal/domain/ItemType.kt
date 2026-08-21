@@ -1,7 +1,7 @@
 package de.optadata.odil.learnwithme.authoring.internal.domain
 
-/** MVP-Fragetypen (§10.1) — SHORT_ANSWER/NUMERIC/CATEGORIZATION (Prio S) und
- * HOTSPOT/CODE_OUTPUT (Prio C) sind bewusst nicht gebaut: kein Epic-C-Story-Bedarf. */
+/** MVP-Fragetypen (§10.1) plus SHORT_ANSWER (Epic H, löst E4). NUMERIC/CATEGORIZATION (Prio S)
+ * und HOTSPOT/CODE_OUTPUT (Prio C) bleiben bewusst nicht gebaut: kein Story-Bedarf. */
 enum class ItemType {
     MC_SINGLE,
     MC_MULTI,
@@ -9,4 +9,5 @@ enum class ItemType {
     ORDERING,
     MATCHING,
     CLOZE,
+    SHORT_ANSWER,
 }

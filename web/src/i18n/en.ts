@@ -82,6 +82,14 @@ const en: Record<keyof typeof de, string> = {
   "item.matching.instructions": "Match each left item to a right item.",
   "item.matching.unmatched": "— select —",
   "item.cloze.instructions": "Fill in the blanks.",
+  "item.shortAnswer.label": "Your answer",
+  "item.shortAnswer.placeholder": "Type your answer …",
+  "item.shortAnswer.grading": "Grading …",
+
+  "session.pendingGrade": "Previous answer is still being graded …",
+  "session.gradedCorrect": "Previous answer: correct ({score}%).",
+  "session.gradedPartial": "Previous answer: partially correct ({score}%).",
+  "session.gradedIncorrect": "Previous answer: not quite ({score}%).",
 
   "progress.title": "Progress",
   "progress.overview": "Overview",

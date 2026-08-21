@@ -61,6 +61,15 @@ class Attempt(
     @Column(name = "p_expected", nullable = false)
     val pExpected: Float,
 
+    /** Epic H: nur für `SHORT_ANSWER` gesetzt — der LLM-Rubric-Verbesserungshinweis
+     * ([de.optadata.odil.learnwithme.assessment.internal.grading.FreeTextGrade.feedback]), einmalig
+     * bei der Attempt-Erstellung mitgeschrieben, weil er sonst (LLM-Nichtdeterminismus) nach
+     * `GradeFreeTextJobHandler`s einzigem Lauf für immer verloren wäre. Für alle anderen Fragetypen
+     * ist das Feedback aus Item+Response jederzeit neu ableitbar (`ResponseGrader`), deshalb dort
+     * bewusst null statt redundant gespeichert. */
+    @Column
+    val feedback: String? = null,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
 )

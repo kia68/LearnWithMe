@@ -54,6 +54,23 @@ data class SubmitAttemptResponse(
     val next: NextItemResponse?,
 )
 
+/** Epic H: `POST attempts` auf ein `SHORT_ANSWER`-Item liefert dies statt [SubmitAttemptResponse]
+ * (202, kein LLM im kritischen Pfad, N1) — [next] kommt trotzdem sofort (optimistisches UI, §6.5),
+ * das eigentliche Grade-Ergebnis folgt asynchron über `GET .../items/{itemId}/grade`. */
+data class PendingAttemptResponse(val next: NextItemResponse?)
+
+/** Poll-Ziel für [PendingAttemptResponse] (Epic H). [status] ist `"PENDING"` oder `"GRADED"` —
+ * die übrigen Felder sind nur im `"GRADED"`-Fall gesetzt. */
+data class GradeStatusResponse(
+    val status: String,
+    val attemptId: Long?,
+    val outcome: String?,
+    val score: Float?,
+    val feedback: FeedbackResponse?,
+    val errorAnalysis: ErrorAnalysisResponse?,
+    val learnerUpdate: LearnerUpdateResponse?,
+)
+
 data class SkipRequest(val itemId: UUID, val reason: String? = null)
 
 data class SkipResponse(val next: NextItemResponse?)
