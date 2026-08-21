@@ -5,4 +5,5 @@ enum class JobType {
     INGEST,
     OCR,
     GENERATE_ITEMS,
+    GENERATE_PARAPHRASE,
 }

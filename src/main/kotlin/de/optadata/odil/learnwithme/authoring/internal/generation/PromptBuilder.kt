@@ -12,6 +12,7 @@ object PromptBuilder {
         appendLine("Antworte NUR mit validem JSON — keine Markdown-Codeblöcke, kein Text vor oder nach dem JSON.")
         appendLine("Erfinde keine Fakten, die nicht direkt im Ausschnitt stehen.")
         appendLine("Jede falsche Option/jeder falsche Fall braucht eine eigene, plausible Begründung, warum sie falsch ist (nicht nur, warum die richtige Antwort richtig ist).")
+        appendLine("Bei Optionen (MC_SINGLE/MC_MULTI): weise jeder FALSCHEN Option ein misconceptionCategory zu — eines von FACTUAL_GAP (falscher/erfundener Fakt), TERM_CONFUSION (verwandter, aber falscher Begriff), CONCEPT_CONFUSION (gehört zu einem benachbarten Konzept), PROCEDURAL (Ablauf-/Reihenfolgefehler). Bei der korrekten Option: misconceptionCategory weglassen oder null.")
         appendLine("bloomLevel ist eines von: REMEMBER, UNDERSTAND, APPLY, ANALYZE, EVALUATE, CREATE.")
         appendLine("Vermeide Optionen wie \"alle der genannten\" oder \"keine der genannten\".")
         appendLine("Variiere die Antwortlängen nicht systematisch — die Länge einer Option darf kein Hinweis auf Richtigkeit sein.")
@@ -20,9 +21,9 @@ object PromptBuilder {
 
     private fun schemaHint(type: ItemType): String = when (type) {
         ItemType.MC_SINGLE ->
-            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "options": [{"id": string, "text": string, "correct": boolean, "rationale": string}, ...]}. Genau EINE Option mit correct=true, insgesamt 3-6 Optionen."""
+            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "options": [{"id": string, "text": string, "correct": boolean, "rationale": string, "misconceptionCategory": string|null}, ...]}. Genau EINE Option mit correct=true, insgesamt 3-6 Optionen."""
         ItemType.MC_MULTI ->
-            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "options": [{"id": string, "text": string, "correct": boolean, "rationale": string}, ...]}. Mindestens ZWEI Optionen mit correct=true, insgesamt 3-6 Optionen."""
+            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "options": [{"id": string, "text": string, "correct": boolean, "rationale": string, "misconceptionCategory": string|null}, ...]}. Mindestens ZWEI Optionen mit correct=true, insgesamt 3-6 Optionen."""
         ItemType.TRUE_FALSE ->
             """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "statement": string, "answer": boolean, "rationale": string}."""
         ItemType.ORDERING ->
@@ -40,6 +41,18 @@ object PromptBuilder {
         appendLine("Textausschnitt (einzige erlaubte Quelle für Fakten):")
         appendLine("\"\"\"")
         appendLine(chunkText)
+        appendLine("\"\"\"")
+    }
+
+    /** E6: Paraphrase-Variante — gleicher Inhalt/gleiches Konzept, andere Formulierung, damit
+     * Wiedererkennen statt Verstehen nicht ausreicht. */
+    fun userPromptForParaphrase(conceptName: String, conceptSummary: String, chunkText: String, originalStem: String): String = buildString {
+        append(userPrompt(conceptName, conceptSummary, chunkText))
+        appendLine()
+        appendLine("Formuliere eine PARAPHRASE der folgenden bereits bestehenden Frage: eine andere Formulierung,")
+        appendLine("die dasselbe Konzeptverständnis prüft, aber nicht wörtlich (auch nicht in Optionen/Struktur) wiederholt wird:")
+        appendLine("\"\"\"")
+        appendLine(originalStem)
         appendLine("\"\"\"")
     }
 }

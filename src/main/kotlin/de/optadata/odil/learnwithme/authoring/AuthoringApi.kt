@@ -2,13 +2,16 @@ package de.optadata.odil.learnwithme.authoring
 
 import java.util.UUID
 
-/** Kandidat für die Item-Auswahl (§11.3) — nur die für die Selection-Policy nötigen Felder. */
+/** Kandidat für die Item-Auswahl (§11.3) — nur die für die Selection-Policy nötigen Felder.
+ * [parentItemId] trägt die Paraphrase-Herkunft (E6) — die Selection-Policy bevorzugt damit die
+ * Paraphrase eines zuletzt falsch beantworteten Items. */
 data class CandidateItemView(
     val id: UUID,
     val conceptId: UUID,
     val type: String,
     val difficulty: Float,
     val difficultyN: Int,
+    val parentItemId: UUID?,
 )
 
 /** Vollständige Sicht auf ein veröffentlichtes Item — Basis für Session-Delivery (D1/D2) und

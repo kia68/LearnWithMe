@@ -236,3 +236,115 @@ Mathematik ohne LLM- oder Item-Abhängigkeit, §6.3).
 - Softmax-Ziehung (§11.3 Schritt 4) nutzt `kotlin.random.Random.Default` (nicht injizierbar) —
   für deterministische Tests der Selection-Policy müsste das später ein austauschbarer Port werden;
   aktuell nur die reine Scoring-/Grading-Mathematik ist getestet, nicht die Zufallsauswahl selbst.
+
+## Infrastruktur-Fixes nach Epic D (CI-Kaskade)
+
+Beim ersten tatsächlich laufenden CI-Lauf (`gradlew` bekam erstmals das Ausführungsbit, siehe
+Commit-Historie) sind sechs vorbestehende, bis dahin unsichtbare Lücken aufgefallen — keine davon
+in Epic-D-Fachcode, alle nur unsichtbar, weil `@SpringBootTest` in keiner Entwicklungssession
+(kein lokales Docker) je tatsächlich gebootet ist:
+
+1. `gradlew` war als `100644` statt `100755` getrackt (Windows-Checkout verschleiert das lokal).
+2. `spring-boot-docker-compose` ist bewusst `developmentOnly` und damit nicht auf dem
+   Testklassenpfad → `@SpringBootTest` brauchte eigene Infrastruktur: Testcontainers-Postgres
+   (`pgvector/pgvector:pg17`, wegen `CREATE EXTENSION vector`) und -MinIO (`S3StorageService`
+   verbindet sich per `@PostConstruct`), beide in `LearnWithMeApplicationTests`.
+3. Spring Boot 4 hat `FlywayAutoConfiguration`/`FlywayMigrationStrategy` in ein eigenes Artefakt
+   `spring-boot-flyway` ausgelagert — ohne es lief Flyway nie (kein Fehler, keine Log-Zeile),
+   `ddl-auto=validate` scheiterte mit „missing table" gegen ein leeres Schema.
+4. `spring-modulith-starter-jpa` braucht die `event_publication`-Tabelle, legt sie aber nicht
+   selbst an (V7-Migration, DDL aus der Modulith-Referenzdokumentation übernommen — bewusst nicht
+   `schema-initialization.enabled=true`, gleiche Begründung wie bei der `pgvector`-Extension: Schema
+   nur aus Flyway, §8.3).
+5. `@Component`-registrierte `@ConfigurationProperties`-Klassen mit verschachtelten
+   Konstruktorparametern (`AiRoutingProperties` aus Epic C, `AdaptivityProperties`/
+   `SelectionProperties` aus Epic D) lösten Spring Boots normale `@Autowired`-Konstruktor-Auflösung
+   aus statt Properties-Binding → `NoSuchBeanDefinitionException` für die verschachtelten Typen.
+   Fix: `@ConfigurationPropertiesScan` auf `LearnWithMeApplication`, `@Component` entfernt.
+6. Sowohl der `openai`- als auch der `ollama`-Spring-AI-Starter sind auf dem Klassenpfad (ADR-004)
+   und konfigurieren beide unbedingt ein `EmbeddingModel`-Bean →
+   `PgVectorStoreAutoConfiguration` fand zwei Kandidaten. Fix: `spring.ai.model.embedding=openai`
+   (per Jar-Introspektion verifiziert, gleiche Methode wie schon in Epic C für Spring-AI-API-Fragen).
+
+Alle sechs Fixes sind auf `main` (nicht auf einem Epic-Branch) gelandet, einzeln per CI verifiziert,
+bevor der jeweils nächste angegangen wurde.
+
+## Epic E — Echtzeit-Fehlerkorrektur & -analyse
+
+Branch: `epicE` (von `main`, das zu diesem Zeitpunkt Epic A-D und die obige CI-Kaskade enthielt).
+Neues Modul `analytics` (Fehlerklassifikation, Misconception-Aggregation, Wochenreport) — bewusst
+OHNE `ai`-Abhängigkeit (anders als in PLAN.md §6.3 skizziert): E1 ist per eigenem Architekturprinzip
+LLM-frei zur Laufzeit (§11.5), es gibt daher nichts, wofür `analytics` einen `LlmGateway`-Zugriff
+bräuchte. `ai-routing.error-analysis` (seit Epic D in application.yml vorprovisioniert) bleibt
+unkonsumiert — reserviert für eine mögliche spätere asynchrone LLM-Verfeinerung.
+
+- **E1** — `analytics.internal.classification.ErrorClassifier` (reine Funktion, kein I/O):
+  Reihenfolge AMBIGUOUS_ITEM (θ_vorher > Item-Schwierigkeit + Margin) → CARELESS (erwartete
+  Erfolgswahrscheinlichkeit hoch + sehr kurze Antwortzeit) → Distraktor-Tag
+  (`misconceptionCategory`, neues Feld auf `authoring.Option`, von der LLM-Generierung befüllt,
+  C8-Analogon) → Typ-Fallback (ORDERING/MATCHING/CLOZE → PROCEDURAL, sonst FACTUAL_GAP). Ergebnis
+  landet synchron in `POST /sessions/{id}/attempts`s neuem `errorAnalysis`-Feld (§9.3).
+- **E2** — Nachfrage zur selben Quellstelle: `AttemptService` ruft nach einer Fehlklassifikation
+  `ItemSelectionService.selectNext(..., preferredConceptId = item.conceptId)` — die Selection-Policy
+  bleibt dann exklusiv im selben Konzept, statt dem üblichen Scope-Pool zu folgen.
+- **E3** — `misconceptions`-Tabelle: Upsert (user, concept, category) bei jedem klassifizierten
+  Fehler (außer CARELESS/AMBIGUOUS_ITEM — beide sind laut §11.5 explizit keine Wissenslücken).
+  `occurrences >= misconception-threshold` (Default 3) IST die Flag — kein separates Boolean-Feld.
+  `GET /api/v1/progress/misconceptions`.
+- **E4** — **nicht gebaut.** Freitext-gegen-Rubric-Bewertung braucht `SHORT_ANSWER`-Items, die
+  Epic C bewusst nicht generiert (Prio S, kein Story-Bedarf damals). Ohne Fragetyp keine Antworten
+  zum Bewerten — ein neuer Fragetyp ist Authoring-/Epic-C-Scope, nicht Epic E. Echter Blocker,
+  keine Verzögerung.
+- **E5** — `GET /api/v1/reports/weekly`: Top-3 schwächste Konzepte nach `mastery`
+  (`AdaptivityApi.listAllProgress`) + Konzeptnamen (`KnowledgeApi.getConcept`), `recommendedFocus`
+  = schwächstes Konzept. **Nur In-App** (keine SMTP-Infrastruktur in dieser Codebase) und **ohne
+  Trend** (bräuchte eine History-Tabelle über Mastery-Werte, die nirgendwo geführt wird — derselbe
+  bereits in Epic D dokumentierte „kein Verlauf über Zeit"-Gap).
+- **E6** — Paraphrase-Generierung: neuer `GenerationPipeline.generateParaphrase(workspaceId,
+  originalItemId)` — gleicher Chunk/Konzept/Typ wie das Original, neuer Prompt
+  (`PromptBuilder.userPromptForParaphrase`), **ohne** `DuplicateGate` (der würde eine gelungene
+  Paraphrase fälschlich als Duplikat verwerfen — das ist ja der Zweck), `parentItemId` verlinkt sie.
+  Ausgelöst asynchron über die bestehende Job-Queue (`JobType.GENERATE_PARAPHRASE`, ADR-012,
+  idempotent über den `jobKey` — ein Versuch pro Original-Item) direkt aus `analytics` heraus, wenn
+  eine "echte" Wissenslücke (nicht CARELESS/AMBIGUOUS_ITEM) klassifiziert wurde. Landet als
+  gewöhnliches `DRAFT`-Item im normalen C7-Review-Workflow. `ItemSelectionService` bevorzugt beim
+  Wiedersehen (`preferParaphraseOfItemId`) direkt ein Item mit `parentItemId == das zuletzt falsch
+  beantwortete Item`, falls eines bereits veröffentlicht ist.
+
+### Architektur-Notizen (Epic E)
+
+- **Bewusst synchron statt Modulith-Event.** PLAN.md §6.5 skizziert `AttemptRecorded` als
+  asynchrones Event für `analytics`. Da die Klassifikation selbst lastenfrei ist (kein LLM, kein
+  Netzwerk-Call — §11.5s eigene Kernaussage), gibt es keinen Latenzgrund für Async;
+  `AnalyticsApi.analyzeError` ist ein normaler synchroner Port-Aufruf aus `assessment` heraus,
+  genau wie `AdaptivityApi`/`AuthoringApi` in Epic D. Nur die eigentliche Paraphrase-*Generierung*
+  (LLM) läuft asynchron — über die bereits bestehende Job-Queue, nicht über ein neues
+  Event-Listener-Konstrukt.
+- **`analytics` hängt zusätzlich von `adaptivity`(API) und `knowledge`(API) ab** (E5-Wochenreport)
+  — Abweichung von der PLAN.md-§6.3-Tabelle (`analytics ──▶ shared, ai`), von
+  `ApplicationModules.verify()` erlaubt, gleiche Art Abweichung wie schon `assessment` in Epic D.
+- **`Option.misconceptionCategory`** ist eine rückwärtskompatible, nullable Ergänzung
+  (`authoring.internal.domain.ItemPayload`) — bestehende Items ohne dieses Feld deserialisieren
+  weiterhin (Kotlin-Default `null`). `PromptBuilder` fordert es jetzt explizit für MC_SINGLE/
+  MC_MULTI-Distraktoren an; **bereits generierte Items vor diesem Commit haben es nicht** und
+  fallen bei der Fehlerklassifikation auf den Typ-Fallback zurück (FACTUAL_GAP/PROCEDURAL) — kein
+  Nachtrag für Altbestand vorgesehen.
+- `error_events.attempt_id`/`item_id`/`concept_id` sind lose ID-Referenzen ohne JPA-`@ManyToOne`
+  über Modulgrenzen — wie überall sonst in dieser Codebase (z. B. `items.concept_id`).
+- `misconceptions` nutzt `category` (feste Taxonomie) statt PLAN.md §8.1s freiem `label` —
+  es gibt keine über §11.5 hinausgehenden Misconception-Bezeichnungen zu unterscheiden.
+
+### Bekannte Lücken (Epic E)
+
+- **E4 nicht gebaut** (siehe oben — echter Blocker, kein Story-Bedarf ohne `SHORT_ANSWER`-Items).
+- **AMBIGUOUS_ITEM hat keine Review-Queue-Anbindung.** §11.5: „Item flaggen, nicht den Nutzer →
+  Review-Queue". Das ErrorEvent wird korrekt klassifiziert und persistiert, aber es gibt keinen
+  Statusübergang (PUBLISHED → zurück in Review) und kein aggregiertes „N starke Lernende sind
+  gescheitert"-Signal auf Item-Ebene — jedes Ereignis steht nur einzeln in `error_events`. Eine
+  Auswertung dieser Tabelle könnte das später nachliefern, ohne Schemaänderung.
+- **Kein Antwortzeit-Median pro Item** (wie schon in Epic D dokumentiert) — CARELESS nutzt einen
+  festen absoluten Schwellwert (`careless-max-elapsed-ms`) statt eines Item-relativen Werts.
+- **E5 ohne Trend und ohne E-Mail** (siehe oben).
+- Wie immer: kein Docker hier → Migration V8, `@SpringBootTest`-Pfade (Flyway-Schema-Validierung
+  gegen `error_events`/`misconceptions`, tatsächlicher Paraphrase-Job-Lauf) ungetestet. Getestet ist
+  ausschließlich reine Domänenlogik (`ErrorClassifierTest`, `ResponseGraderTest`-Ergänzungen).

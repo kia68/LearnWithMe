@@ -50,7 +50,9 @@ class GenerationPipeline(
         val chunk = contentApi.getChunk(evidenceChunkId)
             ?: throw NotFoundException("Chunk $evidenceChunkId nicht gefunden")
 
-        val (draft, model) = requestDraft(workspaceId, type, concept.name, concept.summary, chunk.text)
+        val system = PromptBuilder.systemPrompt(type)
+        val user = PromptBuilder.userPrompt(concept.name, concept.summary, chunk.text)
+        val (draft, model) = requestDraft(workspaceId, type, system, user)
 
         val structuralIssues = structuralGate.check(draft.payload)
         if (structuralIssues.isNotEmpty()) {
@@ -92,6 +94,50 @@ class GenerationPipeline(
         return item
     }
 
+    /**
+     * E6: Paraphrase-Variante eines bereits bestehenden Items — gleiches Konzept, gleicher
+     * zitierter Chunk, andere Formulierung (`parentItemId` verlinkt sie). Bewusst OHNE
+     * [DuplicateGate]: der ganze Zweck ist inhaltliche Nähe zum Original, C4 (Kosinus > Schwelle
+     * gegen die Item-Bank) würde eine gelungene Paraphrase fälschlich als Duplikat verwerfen.
+     */
+    fun generateParaphrase(workspaceId: UUID, originalItemId: UUID): Item {
+        val original = itemRepository.findById(originalItemId).orElseThrow { NotFoundException("Item $originalItemId nicht gefunden") }
+        val concept = knowledgeApi.getConcept(original.conceptId)
+        val chunk = contentApi.getChunk(original.sourceChunkId)
+            ?: throw NotFoundException("Chunk ${original.sourceChunkId} nicht gefunden")
+
+        val system = PromptBuilder.systemPrompt(original.type)
+        val user = PromptBuilder.userPromptForParaphrase(concept.name, concept.summary, chunk.text, original.stem)
+        val (draft, model) = requestDraft(workspaceId, original.type, system, user)
+
+        val structuralIssues = structuralGate.check(draft.payload)
+        if (structuralIssues.isNotEmpty()) {
+            return persist(
+                workspaceId, original.conceptId, original.type, draft, chunk.id, chunk.charFrom, chunk.charTo, model,
+                status = ItemStatus.REJECTED,
+                quality = mapOf("rejectionReason" to "STRUCTURAL", "issues" to structuralIssues.map { it.message }),
+                parentItemId = original.id,
+            )
+        }
+
+        val groundedness = groundednessGate.check(workspaceId, draft.stem, draft.explanation, chunk.text)
+        if (!groundedness.grounded) {
+            return persist(
+                workspaceId, original.conceptId, original.type, draft, chunk.id, chunk.charFrom, chunk.charTo, model,
+                status = ItemStatus.REJECTED,
+                quality = mapOf("rejectionReason" to "UNGROUNDED", "similarity" to groundedness.similarity, "judgeReason" to groundedness.judgeReason),
+                parentItemId = original.id,
+            )
+        }
+
+        return persist(
+            workspaceId, original.conceptId, original.type, draft, chunk.id, chunk.charFrom, chunk.charTo, model,
+            status = ItemStatus.DRAFT,
+            quality = mapOf("similarity" to groundedness.similarity, "judgeReason" to groundedness.judgeReason, "paraphraseOf" to original.id.toString()),
+            parentItemId = original.id,
+        )
+    }
+
     private data class DraftResult(
         val stem: String,
         val explanation: String,
@@ -102,13 +148,9 @@ class GenerationPipeline(
     private fun requestDraft(
         workspaceId: UUID,
         type: ItemType,
-        conceptName: String,
-        conceptSummary: String,
-        chunkText: String,
+        system: String,
+        user: String,
     ): Pair<DraftResult, String> {
-        val system = PromptBuilder.systemPrompt(type)
-        val user = PromptBuilder.userPrompt(conceptName, conceptSummary, chunkText)
-
         return when (type) {
             ItemType.MC_SINGLE -> {
                 val result = llmGateway.complete(StructuredRequest(workspaceId, LlmTask.ITEM_GENERATION, system, user, McSingleDraft::class.java))
@@ -154,10 +196,12 @@ class GenerationPipeline(
         model: String,
         status: ItemStatus,
         quality: Map<String, Any?>,
+        parentItemId: UUID? = null,
     ): Item = itemRepository.save(
         Item(
             workspaceId = workspaceId,
             conceptId = conceptId,
+            parentItemId = parentItemId,
             type = type,
             stem = draft.stem,
             payload = PayloadCodec.serialize(draft.payload),

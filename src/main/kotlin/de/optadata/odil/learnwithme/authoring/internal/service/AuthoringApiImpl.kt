@@ -16,7 +16,7 @@ class AuthoringApiImpl(private val itemRepository: ItemRepository) : AuthoringAp
     override fun listPublishedForConcept(workspaceId: UUID, conceptId: UUID): List<CandidateItemView> =
         itemRepository.findAllByConceptIdAndStatus(conceptId, ItemStatus.PUBLISHED)
             .filter { it.workspaceId == workspaceId }
-            .map { CandidateItemView(it.id, it.conceptId, it.type.name, it.difficulty, it.difficultyN) }
+            .map { CandidateItemView(it.id, it.conceptId, it.type.name, it.difficulty, it.difficultyN, it.parentItemId) }
 
     override fun getPublished(workspaceId: UUID, itemId: UUID): PublishedItemView {
         val item = itemRepository.findByIdAndWorkspaceIdAndStatus(itemId, workspaceId, ItemStatus.PUBLISHED)

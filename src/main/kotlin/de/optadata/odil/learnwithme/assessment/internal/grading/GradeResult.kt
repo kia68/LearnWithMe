@@ -7,4 +7,7 @@ data class GradeResult(
     val outcome: AttemptOutcome,
     val correctResponseJson: String,
     val chosenOptionRationale: String?,
+    /** E1: `misconceptionCategory` der gewählten (falschen) Option, falls vorhanden — Brücke zur
+     * Fehleranalyse ohne Laufzeit-LLM. Nur für MC_SINGLE/MC_MULTI gesetzt. */
+    val chosenOptionMisconceptionCategory: String? = null,
 )

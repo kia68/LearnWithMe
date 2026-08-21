@@ -128,6 +128,16 @@ learnwithme:
       recent-item-window: 10
       max-same-type-in-a-row: 2
 
+  # Fehleranalyse (§11.5, Epic E). Bewusst ohne LLM im Antwort-kritischen Pfad (N1) — Kategorien
+  # kommen aus der `misconceptionCategory` der gewählten Option (Generierungszeit) oder aus
+  # Attempt-Heuristiken. `ai-routing.error-analysis` (oben) bleibt für eine mögliche spätere
+  # asynchrone LLM-Verfeinerung reserviert, wird von Epic E noch nicht konsumiert.
+  analytics:
+    ambiguous-theta-margin: 1.5
+    careless-max-elapsed-ms: 3000
+    careless-min-expected-success: 0.85
+    misconception-threshold: 3
+
   quality:
     groundedness-similarity-threshold: 0.75
     duplicate-similarity-threshold: 0.93

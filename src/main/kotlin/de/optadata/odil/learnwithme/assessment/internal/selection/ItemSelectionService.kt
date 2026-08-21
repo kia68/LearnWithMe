@@ -11,6 +11,7 @@ import de.optadata.odil.learnwithme.knowledge.KnowledgeApi
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import java.time.Instant
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.random.Random
@@ -19,15 +20,13 @@ import kotlin.random.Random
 private const val EXPLORATION_WEIGHT = 0.05f
 
 /**
- * Item-Auswahl-Policy (§11.3, D2/D9). Bewusst vereinfacht gegenüber PLAN.md:
+ * Item-Auswahl-Policy (§11.3, D2/D9, E2/E6). Bewusst vereinfacht gegenüber PLAN.md:
  * - Kein Prerequisite-Graph-Filter — `knowledge.concept_relations` (PLAN §8.1) wird von keinem
  *   Modul befüllt (Epic B extrahiert nur Frequenz-Konzepte, keine Relationen); ein Filter ohne
  *   Datenquelle wäre toter Code. Siehe docs/progress.md.
  * - `MIXED`-Scope vereinfacht auf „fällige Konzepte" — die volle Drei-Wege-Gewichtung
  *   (fällig/Sessionziel/schwächste Konzepte) bräuchte eine workspace-weite Konzeptliste ohne
  *   Source-Filter, die es in `KnowledgeApi` nicht gibt (nur `listConcepts(sourceId)`).
- * - Paraphrase-Bevorzugung bei zuletzt falscher Antwort (E6) entfällt: Epic C generiert keine
- *   Paraphrase-Varianten (`parent_item_id` bleibt ungenutzt), das ist nicht Teil von Epic D.
  */
 @Component
 class ItemSelectionService(
@@ -38,8 +37,21 @@ class ItemSelectionService(
     private val properties: SelectionProperties,
 ) {
 
-    fun selectNext(session: Session, now: Instant = Instant.now()): SelectedItem? {
-        val conceptIds = resolveConceptPool(session, now)
+    /**
+     * [preferredConceptId] (E2): wenn gesetzt und das Konzept auswählbare Items hat, wird
+     * AUSSCHLIESSLICH aus diesem Konzept gewählt statt aus dem üblichen Scope-Pool — die
+     * Nachfrage nach einem Fehler prüft gezielt dieselbe Quellstelle, nicht irgendeine.
+     * [preferParaphraseOfItemId] (E6): innerhalb dieses eingeschränkten Pools wird eine
+     * Paraphrase-Variante (`parentItemId == preferParaphraseOfItemId`) direkt gewählt, falls
+     * vorhanden — statt wörtlicher Wiederholung.
+     */
+    fun selectNext(
+        session: Session,
+        now: Instant = Instant.now(),
+        preferredConceptId: UUID? = null,
+        preferParaphraseOfItemId: UUID? = null,
+    ): SelectedItem? {
+        val conceptIds = resolveConceptPool(session, now, preferredConceptId)
         if (conceptIds.isEmpty()) return null
 
         val theta = adaptivityApi.listProgress(session.workspaceId, session.userId, conceptIds)
@@ -53,6 +65,12 @@ class ItemSelectionService(
         val avoidType = typeToAvoid(recent.map { it.itemType }, properties.selection.maxSameTypeInARow)
 
         val allCandidates = conceptIds.flatMap { authoringApi.listPublishedForConcept(session.workspaceId, it) }
+
+        if (preferParaphraseOfItemId != null) {
+            val paraphrase = allCandidates.firstOrNull { it.parentItemId == preferParaphraseOfItemId && it.id !in recentItemIds }
+            if (paraphrase != null) return toSelectedItem(session.workspaceId, paraphrase, theta[paraphrase.conceptId] ?: 0f)
+        }
+
         var pool = allCandidates.filterNot { it.id in recentItemIds }
         if (avoidType != null) {
             val withoutAvoidType = pool.filterNot { it.type == avoidType }
@@ -69,23 +87,33 @@ class ItemSelectionService(
         }
 
         val chosen = softmaxPick(scored, properties.selection.softmaxTemperature)
-        val chosenTheta = theta[chosen.conceptId] ?: 0f
-        val detail = authoringApi.getPublished(session.workspaceId, chosen.id)
+        return toSelectedItem(session.workspaceId, chosen, theta[chosen.conceptId] ?: 0f)
+    }
+
+    private fun toSelectedItem(workspaceId: UUID, candidate: CandidateItemView, theta: Float): SelectedItem {
+        val detail = authoringApi.getPublished(workspaceId, candidate.id)
         return SelectedItem(
             itemId = detail.id,
             conceptId = detail.conceptId,
             type = detail.type,
             stem = detail.stem,
             payloadJson = detail.payloadJson,
-            expectedSuccess = adaptivityApi.expectedSuccess(chosenTheta, detail.difficulty),
+            expectedSuccess = adaptivityApi.expectedSuccess(theta, detail.difficulty),
         )
     }
 
-    private fun resolveConceptPool(session: Session, now: Instant) = when (session.scopeKind) {
-        SessionScopeKind.CONCEPT -> listOfNotNull(session.scopeId)
-        SessionScopeKind.SOURCE -> session.scopeId?.let { knowledgeApi.listConcepts(it).map { c -> c.id } } ?: emptyList()
-        SessionScopeKind.DUE_REVIEW, SessionScopeKind.MIXED ->
-            adaptivityApi.listDue(session.workspaceId, session.userId, now).map { it.conceptId }
+    /** [preferredConceptId] (E2) gewinnt, wenn es veröffentlichte Items hat — sonst der übliche
+     * Scope-Pool. */
+    private fun resolveConceptPool(session: Session, now: Instant, preferredConceptId: UUID?): List<UUID> {
+        if (preferredConceptId != null && authoringApi.listPublishedForConcept(session.workspaceId, preferredConceptId).isNotEmpty()) {
+            return listOf(preferredConceptId)
+        }
+        return when (session.scopeKind) {
+            SessionScopeKind.CONCEPT -> listOfNotNull(session.scopeId)
+            SessionScopeKind.SOURCE -> session.scopeId?.let { knowledgeApi.listConcepts(it).map { c -> c.id } } ?: emptyList()
+            SessionScopeKind.DUE_REVIEW, SessionScopeKind.MIXED ->
+                adaptivityApi.listDue(session.workspaceId, session.userId, now).map { it.conceptId }
+        }
     }
 
     /** Erzwingt die Typ-Rotation (D9): nicht mehr als [maxSameTypeInARow] gleiche Typen in Folge. */

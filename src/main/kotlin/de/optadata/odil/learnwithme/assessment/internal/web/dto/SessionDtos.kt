@@ -34,11 +34,14 @@ data class FeedbackResponse(
 
 data class LearnerUpdateResponse(val conceptId: UUID, val thetaBefore: Float, val thetaAfter: Float, val mastery: Float, val nextDueAt: Instant)
 
+data class ErrorAnalysisResponse(val category: String, val confidence: Float, val note: String?)
+
 data class SubmitAttemptResponse(
     val attemptId: Long,
     val outcome: String,
     val score: Float,
     val feedback: FeedbackResponse,
+    val errorAnalysis: ErrorAnalysisResponse?,
     val learnerUpdate: LearnerUpdateResponse,
     val next: NextItemResponse?,
 )

@@ -45,7 +45,8 @@ class ResponseGrader {
         val chosen = opts.firstOrNull { it.path("id").asText() == chosenId }
         val score = if (chosen != null && chosen === correct) 1f else 0f
         val correctJson = mapper.writeValueAsString(mapOf("optionId" to correct?.path("id")?.asText()))
-        return GradeResult(score, outcomeFor(score), correctJson, chosen?.path("rationale")?.asText())
+        val misconceptionCategory = if (score < 1f) chosen?.path("misconceptionCategory")?.asText(null) else null
+        return GradeResult(score, outcomeFor(score), correctJson, chosen?.path("rationale")?.asText(), misconceptionCategory)
     }
 
     private fun gradeMcMulti(payload: JsonNode, response: JsonNode): GradeResult {
@@ -58,8 +59,10 @@ class ResponseGrader {
         val rationaleText = opts.filter { it.path("id").asText() in chosenIds }
             .joinToString("; ") { it.path("rationale").asText() }
         val rationale = if (rationaleText.isBlank()) null else rationaleText
+        val falsePositiveTag = opts.firstOrNull { it.path("id").asText() in chosenIds && it.path("id").asText() !in correctIds }
+            ?.path("misconceptionCategory")?.asText(null)
         val correctJson = mapper.writeValueAsString(mapOf("optionIds" to correctIds.toList()))
-        return GradeResult(score, outcomeFor(score), correctJson, rationale)
+        return GradeResult(score, outcomeFor(score), correctJson, rationale, falsePositiveTag)
     }
 
     private fun gradeTrueFalse(payload: JsonNode, response: JsonNode): GradeResult {

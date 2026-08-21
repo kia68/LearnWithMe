@@ -13,7 +13,16 @@ sealed interface ItemPayload {
     fun validate(maxOptionLengthVarianceRatio: Double): List<ValidationIssue>
 }
 
-data class Option(val id: String, val text: String, val correct: Boolean, val rationale: String)
+/** [misconceptionCategory] ist die Brücke zur Fehleranalyse ohne Laufzeit-LLM (Epic E, §11.5,
+ * §12.2 Regel 4): eine der Taxonomie-Kategorien (FACTUAL_GAP|TERM_CONFUSION|CONCEPT_CONFUSION|
+ * PROCEDURAL), vom Modell für jede falsche Option zugewiesen; bei der korrekten Option null. */
+data class Option(
+    val id: String,
+    val text: String,
+    val correct: Boolean,
+    val rationale: String,
+    val misconceptionCategory: String? = null,
+)
 
 private val FORBIDDEN_OPTION_PATTERNS = listOf(
     "alle der genannten", "alle genannten", "keine der genannten", "keine genannten",

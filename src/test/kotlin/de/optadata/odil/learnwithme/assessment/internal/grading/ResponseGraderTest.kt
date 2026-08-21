@@ -35,6 +35,26 @@ class ResponseGraderTest {
     }
 
     @Test
+    fun `MC_SINGLE wrong choice returns the chosen distractor's misconceptionCategory`() {
+        val payload = """{"options":[
+            {"id":"a","text":"3NF","correct":true,"rationale":"Richtig."},
+            {"id":"b","text":"2NF","correct":false,"rationale":"Falsch, zu schwach.","misconceptionCategory":"TERM_CONFUSION"}
+        ]}"""
+        val result = grader.grade("MC_SINGLE", payload, tree("""{"optionId":"b"}"""))
+        result.chosenOptionMisconceptionCategory shouldBe "TERM_CONFUSION"
+    }
+
+    @Test
+    fun `MC_SINGLE correct choice never reports a misconceptionCategory`() {
+        val payload = """{"options":[
+            {"id":"a","text":"3NF","correct":true,"rationale":"Richtig."},
+            {"id":"b","text":"2NF","correct":false,"rationale":"Falsch, zu schwach.","misconceptionCategory":"TERM_CONFUSION"}
+        ]}"""
+        val result = grader.grade("MC_SINGLE", payload, tree("""{"optionId":"a"}"""))
+        result.chosenOptionMisconceptionCategory shouldBe null
+    }
+
+    @Test
     fun `MC_MULTI gives partial credit and penalizes false positives`() {
         val payload = """{"options":[
             {"id":"a","text":"A","correct":true,"rationale":"r-a"},

@@ -3,6 +3,8 @@ package de.optadata.odil.learnwithme.assessment.internal.service
 import com.fasterxml.jackson.databind.JsonNode
 import de.optadata.odil.learnwithme.adaptivity.AdaptivityApi
 import de.optadata.odil.learnwithme.adaptivity.RecordAttemptResult
+import de.optadata.odil.learnwithme.analytics.AnalyticsApi
+import de.optadata.odil.learnwithme.analytics.ErrorAnalysisView
 import de.optadata.odil.learnwithme.assessment.internal.domain.Attempt
 import de.optadata.odil.learnwithme.assessment.internal.domain.AttemptOutcome
 import de.optadata.odil.learnwithme.assessment.internal.grading.GradeResult
@@ -30,6 +32,7 @@ data class AttemptResult(
     val evidenceChunk: ChunkView?,
     val adaptResult: RecordAttemptResult,
     val next: SelectedItem?,
+    val errorAnalysis: ErrorAnalysisView?,
 )
 
 data class SkipResult(val next: SelectedItem?)
@@ -47,6 +50,7 @@ class AttemptService(
     private val contentApi: ContentApi,
     private val grader: ResponseGrader,
     private val selectionService: ItemSelectionService,
+    private val analyticsApi: AnalyticsApi,
 ) {
     private val mapper = JsonMapper.instance
 
@@ -85,9 +89,33 @@ class AttemptService(
             ),
         )
 
+        // E1/E2/E3/E6: nur bei falscher/teilweise falscher Antwort — synchron, kein LLM (N1).
+        val errorAnalysis = if (grade.outcome != AttemptOutcome.CORRECT) {
+            analyticsApi.analyzeError(
+                workspaceId = workspaceId,
+                userId = userId,
+                attemptId = attempt.id,
+                itemId = itemId,
+                conceptId = item.conceptId,
+                itemType = item.type,
+                expectedSuccess = adaptResult.pExpected,
+                elapsedMs = elapsedMs,
+                thetaBefore = adaptResult.thetaBefore,
+                itemDifficulty = item.difficulty,
+                chosenOptionMisconceptionCategory = grade.chosenOptionMisconceptionCategory,
+            )
+        } else {
+            null
+        }
+
         val evidenceChunk = contentApi.getChunk(item.sourceChunkId)
-        val next = selectionService.selectNext(session, now)
-        return AttemptResult(attempt, grade, item, evidenceChunk, adaptResult, next)
+        // E2: bei einem Fehler gezielt dasselbe Konzept nachfragen, bevorzugt als Paraphrase (E6).
+        val next = if (errorAnalysis != null) {
+            selectionService.selectNext(session, now, preferredConceptId = item.conceptId, preferParaphraseOfItemId = itemId)
+        } else {
+            selectionService.selectNext(session, now)
+        }
+        return AttemptResult(attempt, grade, item, evidenceChunk, adaptResult, next, errorAnalysis)
     }
 
     /** D6: Skip zählt nicht als Fehler (θ unverändert), fließt aber als Item-Qualitätssignal ein. */

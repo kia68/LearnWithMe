@@ -8,6 +8,7 @@ import de.optadata.odil.learnwithme.assessment.internal.service.AttemptResult
 import de.optadata.odil.learnwithme.assessment.internal.service.AttemptService
 import de.optadata.odil.learnwithme.assessment.internal.service.SessionService
 import de.optadata.odil.learnwithme.assessment.internal.service.SessionSummary
+import de.optadata.odil.learnwithme.assessment.internal.web.dto.ErrorAnalysisResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.EvidenceResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.FeedbackResponse
 import de.optadata.odil.learnwithme.assessment.internal.web.dto.FinishSessionResponse
@@ -95,6 +96,7 @@ class SessionController(
             evidence = evidence,
         )
         val learnerUpdate = LearnerUpdateResponse(item.conceptId, adaptResult.thetaBefore, adaptResult.thetaAfter, adaptResult.mastery, adaptResult.dueAt)
-        return SubmitAttemptResponse(attempt.id, attempt.outcome.name, attempt.score, feedback, learnerUpdate, next.toResponse())
+        val errorAnalysisResponse = errorAnalysis?.let { ErrorAnalysisResponse(it.category, it.confidence, it.note) }
+        return SubmitAttemptResponse(attempt.id, attempt.outcome.name, attempt.score, feedback, errorAnalysisResponse, learnerUpdate, next.toResponse())
     }
 }
