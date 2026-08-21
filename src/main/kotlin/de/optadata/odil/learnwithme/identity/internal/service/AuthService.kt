@@ -12,9 +12,9 @@ import de.optadata.odil.learnwithme.identity.internal.persistence.UserRepository
 import de.optadata.odil.learnwithme.identity.internal.persistence.WorkspaceRepository
 import de.optadata.odil.learnwithme.identity.internal.security.JwtIssuer
 import de.optadata.odil.learnwithme.identity.internal.web.dto.TokenResponse
-import de.optadata.odil.learnwithme.shared.web.ConflictException
-import de.optadata.odil.learnwithme.shared.web.ForbiddenException
-import de.optadata.odil.learnwithme.shared.web.UnauthorizedException
+import de.optadata.odil.learnwithme.shared.ConflictException
+import de.optadata.odil.learnwithme.shared.ForbiddenException
+import de.optadata.odil.learnwithme.shared.UnauthorizedException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

@@ -5,7 +5,7 @@ import de.optadata.odil.learnwithme.ai.internal.persistence.AiCredentialReposito
 import de.optadata.odil.learnwithme.ai.internal.persistence.LlmUsageRepository
 import de.optadata.odil.learnwithme.ai.internal.web.dto.QuotaInfo
 import de.optadata.odil.learnwithme.identity.IdentityApi
-import de.optadata.odil.learnwithme.shared.web.QuotaExceededException
+import de.optadata.odil.learnwithme.shared.QuotaExceededException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.time.Instant

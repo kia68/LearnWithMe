@@ -30,6 +30,7 @@ jsoup               = "1.18.3"
 readability4j       = "1.0.8"
 pgvector            = "0.1.6"
 flyway              = "11.3.4"
+awssdk              = "2.54.1"
 
 [libraries]
 # ── Spring Boot (Versionen kommen aus dem Boot-BOM) ───────────────────────────
@@ -74,11 +75,15 @@ spring-ai-anthropic               = { module = "org.springframework.ai:spring-ai
 spring-ai-ollama                  = { module = "org.springframework.ai:spring-ai-starter-model-ollama" }
 spring-ai-pgvector                = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
 
-# ── Content-Extraktion (M1) ──────────────────────────────────────────────────
+# ── Content-Extraktion (Epic B) ──────────────────────────────────────────────
 tika-core                         = { module = "org.apache.tika:tika-core", version.ref = "tika" }
 tika-parsers                      = { module = "org.apache.tika:tika-parsers-standard-package", version.ref = "tika" }
 jsoup                             = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 readability4j                     = { module = "net.dankito.readability4j:readability4j", version.ref = "readability4j" }
+
+# ── Objektspeicher (Epic B, S3-kompatibel — MinIO lokal / Hetzner-S3 prod) ───
+awssdk-bom                        = { module = "software.amazon.awssdk:bom", version.ref = "awssdk" }
+awssdk-s3                         = { module = "software.amazon.awssdk:s3" }
 
 # ── API-Dokumentation ────────────────────────────────────────────────────────
 springdoc-webmvc-ui               = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }

@@ -1,8 +1,14 @@
-package de.optadata.odil.learnwithme.shared.web
+package de.optadata.odil.learnwithme.shared
 
 import org.springframework.http.HttpStatus
 
-/** Basis für fachliche Fehler, die als `application/problem+json` (RFC 9457) beantwortet werden. */
+/**
+ * Basis für fachliche Fehler, die als `application/problem+json` (RFC 9457) beantwortet werden.
+ * Liegt bewusst im Wurzelpaket von `shared`, nicht in `shared.web`: Spring Modulith behandelt
+ * nur das Wurzelpaket eines Moduls als öffentliche API (Named Interface) — jedes andere Modul,
+ * das diese Typen wirft/fängt, würde sonst gegen die Modulgrenzen aus §6.3 verstoßen
+ * (siehe `ModularityTest`).
+ */
 open class ApiException(
     val status: HttpStatus,
     val title: String,

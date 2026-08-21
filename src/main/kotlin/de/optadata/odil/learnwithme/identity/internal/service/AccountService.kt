@@ -5,7 +5,7 @@ import de.optadata.odil.learnwithme.identity.internal.persistence.AccountDeletio
 import de.optadata.odil.learnwithme.identity.internal.persistence.UserRepository
 import de.optadata.odil.learnwithme.identity.internal.web.dto.MeResponse
 import de.optadata.odil.learnwithme.shared.TenantPrincipal
-import de.optadata.odil.learnwithme.shared.web.NotFoundException
+import de.optadata.odil.learnwithme.shared.NotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 

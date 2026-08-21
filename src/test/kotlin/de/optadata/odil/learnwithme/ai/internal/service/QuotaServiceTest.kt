@@ -4,7 +4,7 @@ import de.optadata.odil.learnwithme.ai.internal.domain.CredentialStatus
 import de.optadata.odil.learnwithme.ai.internal.persistence.AiCredentialRepository
 import de.optadata.odil.learnwithme.ai.internal.persistence.LlmUsageRepository
 import de.optadata.odil.learnwithme.identity.IdentityApi
-import de.optadata.odil.learnwithme.shared.web.QuotaExceededException
+import de.optadata.odil.learnwithme.shared.QuotaExceededException
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk

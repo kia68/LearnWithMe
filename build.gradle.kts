@@ -35,6 +35,7 @@ dependencyManagement {
         mavenBom(libs.modulith.bom.get().toString())
         mavenBom(libs.spring.ai.bom.get().toString())
         mavenBom(libs.testcontainers.bom.get().toString())
+        mavenBom(libs.awssdk.bom.get().toString())
     }
 }
 
@@ -77,6 +78,9 @@ dependencies {
     implementation(libs.tika.parsers)                     // bringt PDFBox, POI … transitiv
     implementation(libs.jsoup)
     implementation(libs.readability4j)                    // Mozilla-Readability-Port, §14.3
+
+    // ── Objektspeicher (Epic B) ──────────────────────────────────────────────
+    implementation(libs.awssdk.s3)                         // S3-kompatibel: MinIO lokal / Hetzner-S3 prod
 
     // ── Kotlin ───────────────────────────────────────────────────────────────
     implementation(libs.kotlin.reflect)

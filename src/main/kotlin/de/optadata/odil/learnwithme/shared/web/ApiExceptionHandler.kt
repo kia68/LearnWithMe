@@ -1,5 +1,6 @@
 package de.optadata.odil.learnwithme.shared.web
 
+import de.optadata.odil.learnwithme.shared.ApiException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.MethodArgumentNotValidException

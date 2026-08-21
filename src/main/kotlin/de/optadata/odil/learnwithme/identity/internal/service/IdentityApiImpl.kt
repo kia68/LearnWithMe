@@ -3,7 +3,7 @@ package de.optadata.odil.learnwithme.identity.internal.service
 import de.optadata.odil.learnwithme.identity.IdentityApi
 import de.optadata.odil.learnwithme.identity.internal.persistence.UserRepository
 import de.optadata.odil.learnwithme.identity.internal.persistence.WorkspaceRepository
-import de.optadata.odil.learnwithme.shared.web.NotFoundException
+import de.optadata.odil.learnwithme.shared.NotFoundException
 import org.springframework.stereotype.Service
 import java.util.UUID
 

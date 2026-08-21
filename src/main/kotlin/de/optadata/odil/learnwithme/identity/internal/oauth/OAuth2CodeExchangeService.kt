@@ -3,8 +3,8 @@ package de.optadata.odil.learnwithme.identity.internal.oauth
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.optadata.odil.learnwithme.identity.internal.domain.SsoProvider
-import de.optadata.odil.learnwithme.shared.web.ApiException
-import de.optadata.odil.learnwithme.shared.web.BadGatewayException
+import de.optadata.odil.learnwithme.shared.ApiException
+import de.optadata.odil.learnwithme.shared.BadGatewayException
 import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
 import org.springframework.stereotype.Component

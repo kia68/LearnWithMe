@@ -9,7 +9,7 @@ import de.optadata.odil.learnwithme.ai.internal.verification.CredentialVerifier
 import de.optadata.odil.learnwithme.ai.internal.web.dto.CreateCredentialRequest
 import de.optadata.odil.learnwithme.ai.internal.web.dto.CredentialResponse
 import de.optadata.odil.learnwithme.ai.internal.web.dto.VerifyCredentialResponse
-import de.optadata.odil.learnwithme.shared.web.NotFoundException
+import de.optadata.odil.learnwithme.shared.NotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
