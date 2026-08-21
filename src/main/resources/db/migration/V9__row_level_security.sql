@@ -21,7 +21,14 @@ BEGIN
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE learnwithme TO learnwithme_app;
+-- `current_database()` statt eines hartkodierten Namens: die echte DB heißt "learnwithme" nur in
+-- `compose.yaml`s Dev-Setup — Testcontainers (Tests, siehe AbstractIntegrationTest) vergibt
+-- standardmäßig "test". `GRANT ... ON DATABASE` erlaubt an dieser Stelle kein Funktionsergebnis
+-- direkt, daher `EXECUTE format(...)`.
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO learnwithme_app', current_database());
+END $$;
 GRANT USAGE ON SCHEMA public TO learnwithme_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO learnwithme_app;
 ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA public
