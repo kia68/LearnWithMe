@@ -54,3 +54,5 @@ __pycache__/
 .claude-flow/data/
 .claude-flow/logs/
 .claude-flow/sessions/
+
+.claude-flow/
