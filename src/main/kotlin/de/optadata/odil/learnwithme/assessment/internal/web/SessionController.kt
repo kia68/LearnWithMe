@@ -84,13 +84,13 @@ class SessionController(
         SessionResponse(id, scopeKind.name, scopeId, goalKind.name, goalValue, startedAt, endedAt, next)
 
     private fun SelectedItem?.toResponse(): NextItemResponse? = this?.let {
-        NextItemResponse(it.itemId, it.type, it.stem, mapper.readTree(it.payloadJson), ItemMeta(it.conceptId, it.expectedSuccess))
+        NextItemResponse(it.itemId, it.type, it.stem, mapper.readValue(it.payloadJson, Any::class.java), ItemMeta(it.conceptId, it.expectedSuccess))
     }
 
     private fun AttemptResult.toResponse(): SubmitAttemptResponse {
         val evidence = evidenceChunk?.let { EvidenceResponse(quote = it.text, sourceId = it.sourceId, chunkId = it.id, page = it.pageFrom) }
         val feedback = FeedbackResponse(
-            correctResponse = mapper.readTree(grade.correctResponseJson),
+            correctResponse = mapper.readValue(grade.correctResponseJson, Any::class.java),
             explanation = item.explanation,
             chosenOptionRationale = grade.chosenOptionRationale,
             evidence = evidence,

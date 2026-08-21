@@ -1,6 +1,5 @@
 package de.optadata.odil.learnwithme.assessment.internal.web.dto
 
-import com.fasterxml.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.UUID
 
@@ -8,7 +7,16 @@ data class StartSessionRequest(val scopeKind: String, val scopeId: UUID?, val go
 
 data class ItemMeta(val conceptId: UUID, val expectedSuccess: Float)
 
-data class NextItemResponse(val itemId: UUID, val type: String, val stem: String, val payload: JsonNode, val meta: ItemMeta)
+/** [payload]/[response]/[correctResponse] in diesem File sind bewusst `Any`, nicht
+ * `com.fasterxml.jackson.databind.JsonNode`: Spring Boot 4s `spring-boot-starter-jackson`
+ * bringt standardmäßig Jackson **3.x** mit (`tools.jackson.*`), das den klassischen
+ * Jackson-2-Typ `JsonNode` (aus `shared.JsonMapper`) nicht als eigenes Baum-Modell erkennt und
+ * beim Serialisieren auf Bean-Introspektion zurückfällt (`{"array":false,"object":true,...}`
+ * statt des eigentlichen JSON) — nur beim allerersten echten HTTP-Testlauf entdeckt (Epic F),
+ * da zuvor kein Client diese Endpunkte je aufgerufen hatte. `Any` (Map/List/Primitiv-Baum) ist
+ * für JEDE Jackson-Version verlustfrei; die Umwandlung zurück zu `JsonNode` für das interne
+ * Grading (`ResponseGrader`) passiert an der Controller-/Service-Grenze (`AttemptService`). */
+data class NextItemResponse(val itemId: UUID, val type: String, val stem: String, val payload: Any, val meta: ItemMeta)
 
 data class SessionResponse(
     val sessionId: UUID,
@@ -21,12 +29,12 @@ data class SessionResponse(
     val next: NextItemResponse?,
 )
 
-data class SubmitAttemptRequest(val itemId: UUID, val response: JsonNode, val elapsedMs: Int)
+data class SubmitAttemptRequest(val itemId: UUID, val response: Any, val elapsedMs: Int)
 
 data class EvidenceResponse(val quote: String, val sourceId: UUID, val chunkId: UUID, val page: Int?)
 
 data class FeedbackResponse(
-    val correctResponse: JsonNode,
+    val correctResponse: Any,
     val explanation: String,
     val chosenOptionRationale: String?,
     val evidence: EvidenceResponse?,

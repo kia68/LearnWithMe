@@ -348,3 +348,85 @@ unkonsumiert — reserviert für eine mögliche spätere asynchrone LLM-Verfeine
 - Wie immer: kein Docker hier → Migration V8, `@SpringBootTest`-Pfade (Flyway-Schema-Validierung
   gegen `error_events`/`misconceptions`, tatsächlicher Paraphrase-Job-Lauf) ungetestet. Getestet ist
   ausschließlich reine Domänenlogik (`ErrorClassifierTest`, `ResponseGraderTest`-Ergänzungen).
+
+## Epic F — Web-App & Chrome-Extension
+
+Branch: `epicF`. Neues npm-Workspaces-Monorepo (`packages/api-client`, `web`, `extension`) neben
+dem Kotlin-Backend — anderer Tech-Stack (React/TypeScript/Vite), ADR-011 folgend.
+
+- **F1** — Vollständige React/TS-Webanwendung (Vite, react-router-dom, @tanstack/react-query):
+  Login/Registrierung, Bibliothek, Datei-/URL-Import, Quelldetails (Konzepte, Fragen-Generierung),
+  Lernsession für alle sechs Item-Typen (MC_SINGLE/MC_MULTI/TRUE_FALSE/ORDERING/MATCHING/CLOZE),
+  Fortschrittsseite (Übersicht, fällige Wiederholungen, Fehlmuster, Wochenreport), Einstellungen
+  (BYOK-Credentials, Nutzung, Kontolöschung). Live gegen das laufende Backend end-to-end getestet
+  (claude-in-chrome) — alle sechs Item-Typen, Tastaturbedienung, Skip/Finish, Progress- und
+  Settings-Seite verifiziert.
+- **F2/F3/F4** — Chrome-Extension (Manifest V3, `@crxjs/vite-plugin`): Side Panel
+  (`chrome.sidePanel`, öffnet per Toolbar-Klick) mit Login, „Diese Seite importieren", Bibliothek
+  und einer eingebetteten Mini-Lernsession (MC_SINGLE/MC_MULTI/TRUE_FALSE direkt im Panel; andere
+  Typen verlinken auf die Web-App statt sie zu duplizieren — bewusste Scope-Reduktion, siehe unten).
+  Kontextmenü „Frage erzeugen" auf Textauswahl (`contexts: ["selection"]`) extrahiert das
+  DOM-Fragment der Selektion (`Range.cloneContents()`) im Service Worker via
+  `chrome.scripting.executeScript`, legt es in `chrome.storage.session` ab und öffnet das Side
+  Panel — kein persistenter Content-Script nötig. Permissions bewusst minimal (F4):
+  `storage`, `sidePanel`, `activeTab`, `contextMenus`, ein einzelnes `host_permissions`-Ziel
+  (`http://localhost:8080/*`) — kein `<all_urls>`. Build (`tsc -b && vite build`) verifiziert;
+  **nicht** live in Chrome geladen/geklickt — `chrome://extensions` ist für den
+  claude-in-chrome-Automatisierungstab gesperrt (browser-interne URL), daher blieb die
+  Verifikation auf Typecheck + Build + Wiederverwendung derselben, bereits gegen das Backend
+  getesteten `api-client`-Aufrufe/Response-Shapes beschränkt.
+- **F5** — Barrieren-orientiert durchgängig mitgebaut (kein formales WCAG-2.2-AA-Audit
+  angefordert/durchgeführt): Skip-Link, `aria-current` in der Navigation, `aria-pressed` auf
+  Auswahl-Buttons, sichtbarer `:focus-visible`-Ring, 44px-Mindesthöhe auf Buttons/Inputs,
+  `aria-live`/`role="status"` auf dem Feedback-Panel, tastaturbediente Custom-Controls
+  (Auf/Ab-Buttons statt Drag-only bei ORDERING, natives `<select>` bei MATCHING,
+  Zifferntasten 1-9 + Enter für MC/TRUE_FALSE).
+- **F6** — i18n: eigener leichtgewichtiger `I18nProvider`/`useTranslation` (kein react-i18next),
+  DE/EN, `localStorage`-Persistenz, `navigator.language`-Fallback. Die Extension hat ein
+  **separates, kleineres** DE/EN-Wörterbuch (`extension/src/sidepanel/i18n.ts`) statt das der
+  Web-App zu teilen — beide sind eigenständige npm-Packages ohne gemeinsames i18n-Package;
+  Duplikation bewusst in Kauf genommen statt eines Refactors zu einem `packages/i18n`.
+
+### Architektur-Notizen (Epic F)
+
+- **Jackson-2/3-Kollisionsbug gefunden und behoben (Epic-D-Regression).** Spring Boot 4.1s
+  `spring-boot-starter-jackson` bindet standardmäßig Jackson 3.x (`tools.jackson.*`), während
+  `shared.JsonMapper` und der komplette Assessment-Code seit Epic D klassisches Jackson 2.x
+  (`com.fasterxml.jackson.*`) nutzen. Jeder `NextItemResponse`/`SubmitAttemptRequest`/
+  `FeedbackResponse`, der `JsonNode` (Jackson 2) als Feldtyp trug, wurde vom Boot-3-Jackson-3-
+  `HttpMessageConverter` per Bean-Reflection statt per echter JSON-Struktur serialisiert — der
+  Client bekam faktisch einen Dump der `JsonNode`-Objektfelder (`{"array":false,"object":true,
+  "nodeType":"OBJECT",...}`) statt des eigentlichen Payloads. Unentdeckt seit Epic D, weil bislang
+  nie ein echter HTTP-Client gegen diese Endpunkte lief — erst das browserbasierte End-to-End-Testen
+  in Epic F hat es über einen Rendering-Crash in `MatchingView`/`OrderingView` sichtbar gemacht.
+  Fix: `JsonNode` → `Any` in den drei DTOs (`SessionDtos.kt`), Boundary-Konvertierung
+  `mapper.readValue(json, Any::class.java)` beim Lesen bzw. `mapper.valueToTree(response)` beim
+  Schreiben in `SessionController.kt`/`AttemptService.kt`. `ResponseGrader` (intern, nie
+  HTTP-serialisiert) nutzt weiterhin `JsonNode` — unverändert korrekt.
+- Vite-Dev-Proxy (`server.proxy: { "/api": "http://localhost:8080" }`) statt direkter
+  `fetch`-Aufrufe an Port 8080 — in der Sandbox-Browserumgebung war Port 8080 vom automatisierten
+  Chrome-Tab aus nicht direkt erreichbar; über den Vite-eigenen Port funktioniert es.
+- `openapi-typescript` + `openapi-fetch` als generierter TS-Client (`packages/api-client`,
+  ADR-011) — einzige Quelle der Wahrheit ist die springdoc-generierte OpenAPI-Spec
+  (`scripts/generate-api-client.mjs` holt sie vom laufenden Backend).
+- Konzeptextraktion (B8, frequenzbasiert) griff bei den händisch für den Browsertest hochgeladenen
+  Testdokumenten nicht (zu kurz für den Schwellwert) — Konzept/Items für den Live-Test direkt per
+  SQL geseedet statt über den echten Ingestion-Pfad, da kein LLM-Zugriff in dieser Umgebung
+  verfügbar ist (TLS-Proxy blockiert echtes HTTPS-Egress, siehe unten).
+
+### Bekannte Lücken (Epic F)
+
+- **Extension nie live in Chrome geladen** (siehe F2/F3/F4 oben) — `chrome://extensions` ist für
+  den Automatisierungstab gesperrt. Manuelles Laden (`chrome://extensions` → Entwicklermodus →
+  „Entpackte Erweiterung laden" → `extension/dist`) und Klicktest von Kontextmenü, Side Panel und
+  Session steht noch aus.
+- Side-Panel-Session unterstützt nur MC_SINGLE/MC_MULTI/TRUE_FALSE inline; ORDERING/MATCHING/CLOZE
+  verlinken auf die Web-App (`session.openInWeb`) statt die Item-Renderer zu duplizieren.
+- Kein `packages/i18n`-Share zwischen Web-App und Extension (siehe F6) — zwei unabhängige, kleine
+  Wörterbücher statt eines gemeinsamen Packages.
+- Kein CI-Workflow für `web`/`extension` (nur `backend-ci.yml` existiert) — Typecheck/Build von
+  Web-App und Extension bislang nur lokal verifiziert.
+- URL-Import (B2) gegen eine echte externe Domain (Wikipedia) schlug in dieser Sandbox mit
+  `certificate_unknown`/PKIX-Fehler fehl — bestätigt als TLS-Proxy-Limitation der Umgebung
+  (kein echtes HTTPS-Egress), keine Codeänderung nötig; der Job-Status-Übergang zu `FAILED` selbst
+  funktionierte korrekt.

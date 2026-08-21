@@ -1,0 +1,161 @@
+:root {
+  --color-bg: #ffffff;
+  --color-text: #1a1a1a;
+  --color-border: #d0d0d0;
+  --color-primary: #2b5fd9;
+  --color-success: #1a7f37;
+  --color-warning: #9a6700;
+  --color-error: #cf222e;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-size: 14px;
+}
+
+#root {
+  padding: 0.75rem;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+button,
+input,
+select {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+input {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0 0.6rem;
+}
+
+.btn {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #f6f6f6;
+  cursor: pointer;
+  padding: 0 0.75rem;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  min-height: auto;
+  padding: 0.25rem 0;
+  align-self: flex-start;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+}
+
+.option-item[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: #eef2ff;
+}
+
+.option-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-border);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  background: #eee;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.hint {
+  color: #555;
+  font-size: 0.85rem;
+}
+
+.banner {
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.banner-success {
+  background: #dafbe1;
+  color: var(--color-success);
+}
+
+.banner-warning {
+  background: #fff8c5;
+  color: var(--color-warning);
+}
+
+.banner-error {
+  background: #ffebe9;
+  color: var(--color-error);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

@@ -1,6 +1,5 @@
 package de.optadata.odil.learnwithme.assessment.internal.service
 
-import com.fasterxml.jackson.databind.JsonNode
 import de.optadata.odil.learnwithme.adaptivity.AdaptivityApi
 import de.optadata.odil.learnwithme.adaptivity.RecordAttemptResult
 import de.optadata.odil.learnwithme.analytics.AnalyticsApi
@@ -55,14 +54,16 @@ class AttemptService(
     private val mapper = JsonMapper.instance
 
     @Transactional
-    fun submit(workspaceId: UUID, userId: UUID, sessionId: UUID, itemId: UUID, response: JsonNode, elapsedMs: Int): AttemptResult {
+    fun submit(workspaceId: UUID, userId: UUID, sessionId: UUID, itemId: UUID, response: Any, elapsedMs: Int): AttemptResult {
         val session = sessionRepository.findByIdAndWorkspaceId(sessionId, workspaceId)
             ?: throw NotFoundException("Session $sessionId nicht gefunden")
         if (session.userId != userId) throw NotFoundException("Session $sessionId nicht gefunden")
         if (session.endedAt != null) throw ConflictException("Session $sessionId ist bereits beendet")
 
         val item = authoringApi.getPublished(workspaceId, itemId)
-        val grade = grader.grade(item.type, item.payloadJson, response)
+        // `response` kommt vom Controller als generisches Any (Map/List/Primitiv) — s. SessionDtos.kt-
+        // Kommentar zur Jackson-2/3-Falle; das Grading selbst arbeitet weiterhin mit JsonNode (§10.2).
+        val grade = grader.grade(item.type, item.payloadJson, mapper.valueToTree(response))
         val now = Instant.now()
 
         val adaptResult = adaptivityApi.recordAttempt(

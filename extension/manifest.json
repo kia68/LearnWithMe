@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "LearnWithMe",
+  "version": "0.0.1",
+  "description": "Verwandle markierten Text und die aktuelle Seite in Lernfragen — direkt im Browser.",
+  "action": {
+    "default_title": "LearnWithMe"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  },
+  "permissions": ["storage", "sidePanel", "activeTab", "contextMenus"],
+  "host_permissions": ["http://localhost:8080/*"]
+}

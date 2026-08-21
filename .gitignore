@@ -49,6 +49,15 @@ scripts/github/*.local.json
 __pycache__/
 *.pyc
 
+### Web / Extension (F1-F6) ###
+node_modules/
+web/dist/
+extension/dist/
+extension/.output/
+packages/*/dist/
+*.tsbuildinfo
+.vite/
+
 # Ruflo local secrets and runtime data
 .env.*.local
 .claude-flow/data/

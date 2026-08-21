@@ -1,0 +1,19 @@
+{
+  "name": "learnwithme-clients",
+  "private": true,
+  "description": "Web-App und Chrome-Extension (Epic F, ADR-011) — Kotlin-Backend bleibt im Repo-Root.",
+  "workspaces": [
+    "packages/*",
+    "web",
+    "extension"
+  ],
+  "scripts": {
+    "generate-client": "node scripts/generate-api-client.mjs",
+    "dev:web": "npm run dev --workspace web",
+    "build:web": "npm run build --workspace web",
+    "dev:extension": "npm run dev --workspace extension",
+    "build:extension": "npm run build --workspace extension",
+    "lint": "npm run lint --workspace web && npm run lint --workspace extension",
+    "typecheck": "npm run typecheck --workspace web && npm run typecheck --workspace extension"
+  }
+}
