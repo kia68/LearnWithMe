@@ -85,6 +85,7 @@ dependencies {
     // ── Kotlin ───────────────────────────────────────────────────────────────
     implementation(libs.kotlin.reflect)
     implementation(libs.jackson.module.kotlin)
+    implementation(libs.jackson.module.kotlin.classic)     // s. Kommentar in libs.versions.toml
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.reactor)
 

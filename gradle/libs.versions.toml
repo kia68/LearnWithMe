@@ -53,6 +53,12 @@ kotlin-test-junit5                = { module = "org.jetbrains.kotlin:kotlin-test
 kotlinx-coroutines-core           = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-reactor        = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "coroutines" }
 jackson-module-kotlin             = { module = "tools.jackson.module:jackson-module-kotlin" }
+# Klassisches Jackson 2.x (com.fasterxml.jackson.*) — was die Codebase tatsächlich für
+# ObjectMapper nutzt (Spring Boots eigene Autokonfiguration zieht es transitiv). Das oben
+# deklarierte `tools.jackson.module:jackson-module-kotlin` ist Jackson 3.x (anderer Namespace,
+# nicht kompatibel mit `com.fasterxml.jackson.databind.ObjectMapper`) und wird nur von Spring AI
+# intern gebraucht. Version bewusst ungepinnt: Spring Boots Jackson-2-BOM regelt sie.
+jackson-module-kotlin-classic      = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 
 # ── Persistenz ───────────────────────────────────────────────────────────────
 postgresql                        = { module = "org.postgresql:postgresql" }

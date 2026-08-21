@@ -6,4 +6,5 @@ import java.util.UUID
 
 interface ConceptEvidenceRepository : JpaRepository<ConceptEvidence, UUID> {
     fun findAllByConceptId(conceptId: UUID): List<ConceptEvidence>
+    fun findAllByConceptIdOrderByWeightDesc(conceptId: UUID): List<ConceptEvidence>
 }

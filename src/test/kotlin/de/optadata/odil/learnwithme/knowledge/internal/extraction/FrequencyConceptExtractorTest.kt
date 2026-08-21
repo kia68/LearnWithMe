@@ -5,13 +5,16 @@ import io.kotest.matchers.shouldBe
 import java.util.UUID
 import kotlin.test.Test
 
+private fun chunkView(id: UUID, ordinal: Int, text: String) =
+    ChunkView(id = id, sourceId = UUID.randomUUID(), ordinal = ordinal, text = text, charFrom = 0, charTo = text.length)
+
 class FrequencyConceptExtractorTest {
 
     @Test
     fun `frequently repeated term becomes a concept with correct frequency`() {
         val chunkId = UUID.randomUUID()
         val chunks = listOf(
-            ChunkView(chunkId, 0, "Photosynthese ist wichtig. Photosynthese passiert in Chloroplasten. Photosynthese braucht Licht."),
+            chunkView(chunkId, 0, "Photosynthese ist wichtig. Photosynthese passiert in Chloroplasten. Photosynthese braucht Licht."),
         )
 
         val concepts = FrequencyConceptExtractor.extract(chunks, minOccurrences = 2)
@@ -23,8 +26,8 @@ class FrequencyConceptExtractorTest {
 
     @Test
     fun `evidence spans multiple chunks the term appears in`() {
-        val chunkA = ChunkView(UUID.randomUUID(), 0, "Mitochondrien erzeugen Energie für die Zelle.")
-        val chunkB = ChunkView(UUID.randomUUID(), 1, "Mitochondrien haben eine eigene DNA.")
+        val chunkA = chunkView(UUID.randomUUID(), 0, "Mitochondrien erzeugen Energie für die Zelle.")
+        val chunkB = chunkView(UUID.randomUUID(), 1, "Mitochondrien haben eine eigene DNA.")
 
         val concepts = FrequencyConceptExtractor.extract(listOf(chunkA, chunkB), minOccurrences = 2)
 
@@ -34,7 +37,7 @@ class FrequencyConceptExtractorTest {
 
     @Test
     fun `terms below the occurrence threshold are dropped`() {
-        val chunk = ChunkView(UUID.randomUUID(), 0, "Einmaliges Wort taucht nur hier auf.")
+        val chunk = chunkView(UUID.randomUUID(), 0, "Einmaliges Wort taucht nur hier auf.")
 
         val concepts = FrequencyConceptExtractor.extract(listOf(chunk), minOccurrences = 2)
 
@@ -43,7 +46,7 @@ class FrequencyConceptExtractorTest {
 
     @Test
     fun `common stopwords never become concepts regardless of frequency`() {
-        val chunk = ChunkView(UUID.randomUUID(), 0, "und und und der der der ist ist ist")
+        val chunk = chunkView(UUID.randomUUID(), 0, "und und und der der der ist ist ist")
 
         val concepts = FrequencyConceptExtractor.extract(listOf(chunk), minOccurrences = 2)
 
@@ -56,7 +59,7 @@ class FrequencyConceptExtractorTest {
         // Ziffer ab, ein numerisches Suffix würde also fälschlich alle auf denselben Stamm falten.
         val words = ('a'..'t').map { letter -> "begriff$letter" } // 20 unterschiedliche Wörter
         val text = words.joinToString(" ") { "$it $it" } // je 2x
-        val chunk = ChunkView(UUID.randomUUID(), 0, text)
+        val chunk = chunkView(UUID.randomUUID(), 0, text)
 
         val concepts = FrequencyConceptExtractor.extract(listOf(chunk), maxConcepts = 5, minOccurrences = 2)
 

@@ -4,4 +4,5 @@ package de.optadata.odil.learnwithme.platform
 enum class JobType {
     INGEST,
     OCR,
+    GENERATE_ITEMS,
 }
