@@ -6,13 +6,19 @@ import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 
 /**
  * Gemeinsame Testcontainers-Infrastruktur für `@SpringBootTest`s (Epic G), extrahiert aus
  * [LearnWithMeApplicationTests] — siehe dort für die Begründung von Postgres-Image und MinIO.
+ *
+ * Bewusst **kein** `@Testcontainers`/`@Container` (Testcontainers' "Singleton Containers"-Muster
+ * statt des `@Container`-Lifecycles): `@Container` bindet Start/Stop an die JUnit-Extension der
+ * jeweiligen *Testklasse* — bei einer in der Basisklasse geteilten Companion-Object-Instanz stoppt
+ * das den Container nach der ersten Subklasse (hier zuerst `LearnWithMeApplicationTests`), obwohl
+ * `RowLevelSecurityTest` ihn danach noch braucht (`ConnectException`, da bereits gestoppt). Manuelles
+ * `.start()` unten läuft nur einmal (Kotlin-`object`-Initialisierung ist selbst thread-sicher/einmalig)
+ * und wird nie von JUnit wieder gestoppt — stirbt einfach mit der Test-JVM.
  *
  * Bewusst **kein** `@ServiceConnection` (Epic G): `application.yml` trennt seit V9
  * `spring.datasource.*` (App-Traffic, Rolle `learnwithme_app`) von `spring.flyway.*`
@@ -24,17 +30,14 @@ import org.testcontainers.utility.DockerImageName
  * URL mit `learnwithme_app`/demselben Dev-Passwort wie in V9.
  */
 @SpringBootTest
-@Testcontainers
 abstract class AbstractIntegrationTest {
 
     companion object {
-        @Container
         @JvmStatic
         val postgres: PostgreSQLContainer<*> = PostgreSQLContainer(
             DockerImageName.parse("pgvector/pgvector:pg17").asCompatibleSubstituteFor("postgres"),
-        )
+        ).also { it.start() }
 
-        @Container
         @JvmStatic
         val minio: GenericContainer<*> = GenericContainer(DockerImageName.parse("minio/minio:latest"))
             .withCommand("server", "/data")
@@ -42,6 +45,7 @@ abstract class AbstractIntegrationTest {
             .withEnv("MINIO_ROOT_PASSWORD", "learnwithme")
             .withExposedPorts(9000)
             .waitingFor(Wait.forHttp("/minio/health/live").forPort(9000))
+            .also { it.start() }
 
         @DynamicPropertySource
         @JvmStatic
