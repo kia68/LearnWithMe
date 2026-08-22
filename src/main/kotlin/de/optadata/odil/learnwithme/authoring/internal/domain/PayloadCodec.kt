@@ -16,6 +16,9 @@ object PayloadCodec {
         ItemType.MATCHING -> mapper.readValue(json, MatchingPayload::class.java)
         ItemType.CLOZE -> mapper.readValue(json, ClozePayload::class.java)
         ItemType.SHORT_ANSWER -> mapper.readValue(json, ShortAnswerPayload::class.java)
+        ItemType.NUMERIC -> mapper.readValue(json, NumericPayload::class.java)
+        ItemType.CATEGORIZATION -> mapper.readValue(json, CategorizationPayload::class.java)
+        ItemType.CODE_OUTPUT -> mapper.readValue(json, CodeOutputPayload::class.java)
     }
 
     fun targetClass(type: ItemType): Class<out ItemPayload> = when (type) {
@@ -26,5 +29,8 @@ object PayloadCodec {
         ItemType.MATCHING -> MatchingPayload::class.java
         ItemType.CLOZE -> ClozePayload::class.java
         ItemType.SHORT_ANSWER -> ShortAnswerPayload::class.java
+        ItemType.NUMERIC -> NumericPayload::class.java
+        ItemType.CATEGORIZATION -> CategorizationPayload::class.java
+        ItemType.CODE_OUTPUT -> CodeOutputPayload::class.java
     }
 }

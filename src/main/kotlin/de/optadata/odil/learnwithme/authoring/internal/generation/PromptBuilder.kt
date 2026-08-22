@@ -34,6 +34,12 @@ object PromptBuilder {
             """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "template": "Lückentext mit {{1}}, {{2}}, ...", "blanks": [{"accepted": [string, ...]}, ...]}. Platzhalter-Nummerierung beginnt bei 1 und ist lückenlos fortlaufend."""
         ItemType.SHORT_ANSWER ->
             """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "rubric": [{"criterion": string, "points": int}, ...], "referenceAnswer": string}. Mindestens EIN Rubric-Kriterium mit points > 0; referenceAnswer ist eine vollständige Musterantwort, gegen die eine Freitextantwort später bewertet wird."""
+        ItemType.NUMERIC ->
+            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "value": number, "tolerance": number, "unit": string|null}. tolerance >= 0 und sinnvoll im Verhältnis zu value (z.B. Rundungstoleranz); unit nur setzen, wenn die Frage eine Einheit verlangt, sonst null."""
+        ItemType.CATEGORIZATION ->
+            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "buckets": [{"id": string, "label": string}, ...], "elements": [{"id": string, "text": string, "bucketId": string}, ...]}. Mindestens 2 Kategorien und mindestens 3 Elemente; jedes Element referenziert eine der buckets-IDs."""
+        ItemType.CODE_OUTPUT ->
+            """JSON-Schema: {"stem": string, "explanation": string, "bloomLevel": string, "snippet": string, "language": string, "expected": string}. snippet ist ein kurzes, lauffähiges Code-Beispiel aus dem Textausschnitt oder einer direkten Anwendung davon; expected ist exakt die Ausgabe, die dieses snippet erzeugt (kein zusätzlicher Text, keine Erklärung darin)."""
     }
 
     fun userPrompt(conceptName: String, conceptSummary: String, chunkText: String): String = buildString {

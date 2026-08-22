@@ -4,7 +4,9 @@ import de.optadata.odil.learnwithme.ai.LlmGateway
 import de.optadata.odil.learnwithme.ai.LlmTask
 import de.optadata.odil.learnwithme.ai.StructuredRequest
 import de.optadata.odil.learnwithme.authoring.internal.domain.BloomLevel
+import de.optadata.odil.learnwithme.authoring.internal.domain.CategorizationPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.ClozePayload
+import de.optadata.odil.learnwithme.authoring.internal.domain.CodeOutputPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.Item
 import de.optadata.odil.learnwithme.authoring.internal.domain.ItemPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.ItemStatus
@@ -12,6 +14,7 @@ import de.optadata.odil.learnwithme.authoring.internal.domain.ItemType
 import de.optadata.odil.learnwithme.authoring.internal.domain.MatchingPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.McMultiPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.McSinglePayload
+import de.optadata.odil.learnwithme.authoring.internal.domain.NumericPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.OrderingPayload
 import de.optadata.odil.learnwithme.authoring.internal.domain.PayloadCodec
 import de.optadata.odil.learnwithme.authoring.internal.domain.ShortAnswerPayload
@@ -187,6 +190,21 @@ class GenerationPipeline(
                 val result = llmGateway.complete(StructuredRequest(workspaceId, LlmTask.ITEM_GENERATION, system, user, ShortAnswerDraft::class.java))
                 val d = result.value
                 DraftResult(d.stem, d.explanation, d.bloomLevel, ShortAnswerPayload(d.rubric, d.referenceAnswer)) to result.model
+            }
+            ItemType.NUMERIC -> {
+                val result = llmGateway.complete(StructuredRequest(workspaceId, LlmTask.ITEM_GENERATION, system, user, NumericDraft::class.java))
+                val d = result.value
+                DraftResult(d.stem, d.explanation, d.bloomLevel, NumericPayload(d.value, d.tolerance, d.unit)) to result.model
+            }
+            ItemType.CATEGORIZATION -> {
+                val result = llmGateway.complete(StructuredRequest(workspaceId, LlmTask.ITEM_GENERATION, system, user, CategorizationDraft::class.java))
+                val d = result.value
+                DraftResult(d.stem, d.explanation, d.bloomLevel, CategorizationPayload(d.buckets, d.elements)) to result.model
+            }
+            ItemType.CODE_OUTPUT -> {
+                val result = llmGateway.complete(StructuredRequest(workspaceId, LlmTask.ITEM_GENERATION, system, user, CodeOutputDraft::class.java))
+                val d = result.value
+                DraftResult(d.stem, d.explanation, d.bloomLevel, CodeOutputPayload(d.snippet, d.language, d.expected)) to result.model
             }
         }
     }

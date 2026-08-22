@@ -144,3 +144,54 @@ data class ShortAnswerPayload(
         if (referenceAnswer.isBlank()) add(ValidationIssue("EMPTY_REFERENCE_ANSWER", "referenceAnswer darf nicht leer sein."))
     }
 }
+
+/** [unit] ist optional (z.B. „kg", „%") — wenn gesetzt, muss die Antwort sie tragen und sie fließt
+ * mit ins Grading (§10.1: „Toleranz, Einheit"); `null` heißt: reine Zahl, keine Einheitsprüfung. */
+data class NumericPayload(
+    val value: Double,
+    val tolerance: Double,
+    val unit: String? = null,
+) : ItemPayload {
+    override fun validate(maxOptionLengthVarianceRatio: Double) = buildList {
+        if (tolerance < 0) add(ValidationIssue("NEGATIVE_TOLERANCE", "tolerance darf nicht negativ sein."))
+        if (unit != null && unit.isBlank()) add(ValidationIssue("BLANK_UNIT", "unit darf, wenn gesetzt, nicht leer sein."))
+    }
+}
+
+data class CategorizationBucket(val id: String, val label: String)
+
+/** [bucketId] ist die korrekte Zuordnung — beim Ausliefern an den Client vor der Antwort entfernt
+ * (siehe `SessionController.stripAnswerFields`, Härtung nach Epic H). */
+data class CategorizationElement(val id: String, val text: String, val bucketId: String)
+
+data class CategorizationPayload(
+    val buckets: List<CategorizationBucket>,
+    val elements: List<CategorizationElement>,
+) : ItemPayload {
+    override fun validate(maxOptionLengthVarianceRatio: Double) = buildList {
+        if (buckets.size < 2) add(ValidationIssue("TOO_FEW_BUCKETS", "CATEGORIZATION braucht mindestens 2 Kategorien."))
+        if (elements.size < 3) add(ValidationIssue("TOO_FEW_ELEMENTS", "CATEGORIZATION braucht mindestens 3 Elemente."))
+        val bucketIds = buckets.map { it.id }.toSet()
+        if (bucketIds.size != buckets.size) add(ValidationIssue("DUPLICATE_BUCKET_IDS", "Kategorie-IDs sind nicht eindeutig."))
+        val elementIds = elements.map { it.id }.toSet()
+        if (elementIds.size != elements.size) add(ValidationIssue("DUPLICATE_ELEMENT_IDS", "Element-IDs sind nicht eindeutig."))
+        if (elements.any { it.bucketId !in bucketIds }) {
+            add(ValidationIssue("UNKNOWN_BUCKET_REFERENCE", "Ein Element referenziert eine unbekannte Kategorie."))
+        }
+    }
+}
+
+/** [expected] ist exakter (nur getrimmter) String-Vergleich — Code-Ausgabe ist oft
+ * groß-/kleinschreibungssensitiv (z.B. Python `True` vs. `true`), anders als CLOZE (das
+ * bewusst case-insensitive normalisiert, §10.2). */
+data class CodeOutputPayload(
+    val snippet: String,
+    val language: String,
+    val expected: String,
+) : ItemPayload {
+    override fun validate(maxOptionLengthVarianceRatio: Double) = buildList {
+        if (snippet.isBlank()) add(ValidationIssue("EMPTY_SNIPPET", "snippet darf nicht leer sein."))
+        if (language.isBlank()) add(ValidationIssue("EMPTY_LANGUAGE", "language darf nicht leer sein."))
+        if (expected.isBlank()) add(ValidationIssue("EMPTY_EXPECTED", "expected darf nicht leer sein."))
+    }
+}

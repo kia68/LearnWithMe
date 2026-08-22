@@ -119,4 +119,34 @@ class SessionControllerTest {
         assertFalse(json.contains("Die geheime Antwort"))
         assertTrue(json.contains("Nennt X"))
     }
+
+    @Test
+    fun `NUMERIC strips value but keeps tolerance and unit`() {
+        val json = asJson(nextPayload("NUMERIC", """{"value":9.81,"tolerance":0.1,"unit":"m/s^2"}"""))
+        assertFalse(json.contains("9.81"))
+        assertFalse(json.contains("\"value\""))
+        assertTrue(json.contains("\"tolerance\":0.1"))
+        assertTrue(json.contains("m/s^2"))
+    }
+
+    @Test
+    fun `CATEGORIZATION strips each element's bucketId but keeps buckets and element text`() {
+        val json = asJson(
+            nextPayload(
+                "CATEGORIZATION",
+                """{"buckets":[{"id":"b1","label":"Fisch"},{"id":"b2","label":"Säugetier"}],
+                    |"elements":[{"id":"e1","text":"Hai","bucketId":"b1"},{"id":"e2","text":"Wal","bucketId":"b2"}]}""".trimMargin(),
+            ),
+        )
+        assertFalse(json.contains("bucketId"))
+        assertTrue(json.contains("\"id\":\"b1\""))
+        assertTrue(json.contains("\"text\":\"Hai\""))
+    }
+
+    @Test
+    fun `CODE_OUTPUT strips expected but keeps the snippet`() {
+        val json = asJson(nextPayload("CODE_OUTPUT", """{"snippet":"print(1 + 1)","language":"python","expected":"2"}"""))
+        assertFalse(json.contains("expected"))
+        assertTrue(json.contains("print(1 + 1)"))
+    }
 }

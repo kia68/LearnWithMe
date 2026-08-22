@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
+import CategorizationItem from "./CategorizationItem";
 import ClozeItem from "./ClozeItem";
+import CodeOutputItem from "./CodeOutputItem";
 import MatchingItem from "./MatchingItem";
 import McChoice from "./McChoice";
+import NumericItem from "./NumericItem";
 import OrderingItem from "./OrderingItem";
 import ShortAnswerItem from "./ShortAnswerItem";
 import TrueFalseItem from "./TrueFalseItem";
 import type {
+  CategorizationPayload,
   ClozePayload,
+  CodeOutputPayload,
   ItemResponseBody,
   MatchingPayload,
   McMultiPayload,
   McSinglePayload,
+  NumericPayload,
   OrderingPayload,
   ShortAnswerPayload,
   TrueFalsePayload,
@@ -44,6 +50,12 @@ export default function ItemRenderer({ type, payload, disabled, correctResponse,
       return <ClozeView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
     case "SHORT_ANSWER":
       return <ShortAnswerView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
+    case "NUMERIC":
+      return <NumericView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
+    case "CATEGORIZATION":
+      return <CategorizationView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
+    case "CODE_OUTPUT":
+      return <CodeOutputView payload={payload} disabled={disabled} onResponseChange={onResponseChange} />;
     default:
       return <p role="alert">Unbekannter Fragetyp: {type}</p>;
   }
@@ -160,6 +172,61 @@ function ShortAnswerView({
   const [answer, setAnswer] = useState("");
   useEffect(() => onResponseChange(answer.trim() ? { answer } : null), [answer, onResponseChange]);
   return <ShortAnswerItem payload={payload} value={answer} onChange={setAnswer} disabled={disabled} />;
+}
+
+function NumericView({
+  payload,
+  disabled,
+  onResponseChange,
+}: {
+  payload: NumericPayload;
+  disabled: boolean;
+  onResponseChange: (r: ItemResponseBody | null) => void;
+}) {
+  const [answer, setAnswer] = useState("");
+  const [unit, setUnit] = useState("");
+  useEffect(() => {
+    const parsed = Number(answer);
+    if (answer.trim() === "" || Number.isNaN(parsed)) {
+      onResponseChange(null);
+    } else {
+      onResponseChange(payload.unit != null ? { answer: parsed, unit } : { answer: parsed });
+    }
+  }, [answer, unit, payload.unit, onResponseChange]);
+  return <NumericItem payload={payload} answer={answer} unit={unit} onChangeAnswer={setAnswer} onChangeUnit={setUnit} disabled={disabled} />;
+}
+
+function CategorizationView({
+  payload,
+  disabled,
+  onResponseChange,
+}: {
+  payload: CategorizationPayload;
+  disabled: boolean;
+  onResponseChange: (r: ItemResponseBody | null) => void;
+}) {
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const entries = Object.entries(assignments);
+    onResponseChange(
+      entries.length === payload.elements.length ? { assignments: entries.map(([elementId, bucketId]) => ({ elementId, bucketId })) } : null,
+    );
+  }, [assignments, payload.elements.length, onResponseChange]);
+  return <CategorizationItem payload={payload} assignments={assignments} onChange={setAssignments} disabled={disabled} />;
+}
+
+function CodeOutputView({
+  payload,
+  disabled,
+  onResponseChange,
+}: {
+  payload: CodeOutputPayload;
+  disabled: boolean;
+  onResponseChange: (r: ItemResponseBody | null) => void;
+}) {
+  const [answer, setAnswer] = useState("");
+  useEffect(() => onResponseChange(answer.trim() ? { answer } : null), [answer, onResponseChange]);
+  return <CodeOutputItem payload={payload} value={answer} onChange={setAnswer} disabled={disabled} />;
 }
 
 function extractOptionIds(correctResponse: unknown, key: "optionId" | "optionIds"): string[] | undefined {

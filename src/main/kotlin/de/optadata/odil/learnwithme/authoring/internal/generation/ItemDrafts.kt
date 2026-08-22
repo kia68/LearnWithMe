@@ -1,6 +1,8 @@
 package de.optadata.odil.learnwithme.authoring.internal.generation
 
 import de.optadata.odil.learnwithme.authoring.internal.domain.BloomLevel
+import de.optadata.odil.learnwithme.authoring.internal.domain.CategorizationBucket
+import de.optadata.odil.learnwithme.authoring.internal.domain.CategorizationElement
 import de.optadata.odil.learnwithme.authoring.internal.domain.ClozeBlank
 import de.optadata.odil.learnwithme.authoring.internal.domain.MatchingItem
 import de.optadata.odil.learnwithme.authoring.internal.domain.MatchingPair
@@ -59,4 +61,30 @@ data class ShortAnswerDraft(
     val bloomLevel: BloomLevel,
     val rubric: List<RubricCriterion>,
     val referenceAnswer: String,
+)
+
+data class NumericDraft(
+    val stem: String,
+    val explanation: String,
+    val bloomLevel: BloomLevel,
+    val value: Double,
+    val tolerance: Double,
+    val unit: String? = null,
+)
+
+data class CategorizationDraft(
+    val stem: String,
+    val explanation: String,
+    val bloomLevel: BloomLevel,
+    val buckets: List<CategorizationBucket>,
+    val elements: List<CategorizationElement>,
+)
+
+data class CodeOutputDraft(
+    val stem: String,
+    val explanation: String,
+    val bloomLevel: BloomLevel,
+    val snippet: String,
+    val language: String,
+    val expected: String,
 )

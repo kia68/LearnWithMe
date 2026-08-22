@@ -44,4 +44,34 @@ class PayloadCodecTest {
 
         decoded shouldBe payload
     }
+
+    @Test
+    fun `round-trips NumericPayload`() {
+        val payload = NumericPayload(value = 9.81, tolerance = 0.05, unit = "m/s^2")
+
+        val decoded = PayloadCodec.deserialize(ItemType.NUMERIC, PayloadCodec.serialize(payload))
+
+        decoded shouldBe payload
+    }
+
+    @Test
+    fun `round-trips CategorizationPayload`() {
+        val payload = CategorizationPayload(
+            buckets = listOf(CategorizationBucket("b1", "Fisch"), CategorizationBucket("b2", "Säugetier")),
+            elements = listOf(CategorizationElement("e1", "Hai", "b1"), CategorizationElement("e2", "Wal", "b2")),
+        )
+
+        val decoded = PayloadCodec.deserialize(ItemType.CATEGORIZATION, PayloadCodec.serialize(payload))
+
+        decoded shouldBe payload
+    }
+
+    @Test
+    fun `round-trips CodeOutputPayload`() {
+        val payload = CodeOutputPayload(snippet = "print(1 + 1)", language = "python", expected = "2")
+
+        val decoded = PayloadCodec.deserialize(ItemType.CODE_OUTPUT, PayloadCodec.serialize(payload))
+
+        decoded shouldBe payload
+    }
 }

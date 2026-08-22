@@ -134,4 +134,63 @@ class ResponseGraderTest {
         result.score shouldBe 0.5f
         result.outcome shouldBe AttemptOutcome.PARTIAL
     }
+
+    @Test
+    fun `NUMERIC within tolerance and matching unit scores 1`() {
+        val payload = """{"value":9.81,"tolerance":0.1,"unit":"m/s^2"}"""
+        val result = grader.grade("NUMERIC", payload, tree("""{"answer":9.85,"unit":"m/s^2"}"""))
+        result.score shouldBe 1f
+        result.outcome shouldBe AttemptOutcome.CORRECT
+    }
+
+    @Test
+    fun `NUMERIC outside tolerance scores 0`() {
+        val payload = """{"value":9.81,"tolerance":0.1,"unit":"m/s^2"}"""
+        val result = grader.grade("NUMERIC", payload, tree("""{"answer":10.5,"unit":"m/s^2"}"""))
+        result.score shouldBe 0f
+    }
+
+    @Test
+    fun `NUMERIC within tolerance but wrong unit scores 0`() {
+        val payload = """{"value":9.81,"tolerance":0.1,"unit":"m/s^2"}"""
+        val result = grader.grade("NUMERIC", payload, tree("""{"answer":9.81,"unit":"km/h"}"""))
+        result.score shouldBe 0f
+    }
+
+    @Test
+    fun `NUMERIC without a required unit in the payload ignores unit in the response`() {
+        val payload = """{"value":42.0,"tolerance":0.0}"""
+        val result = grader.grade("NUMERIC", payload, tree("""{"answer":42.0}"""))
+        result.score shouldBe 1f
+    }
+
+    @Test
+    fun `CATEGORIZATION scores the fraction of correctly assigned elements`() {
+        val payload = """{"buckets":[{"id":"b1","label":"Fisch"},{"id":"b2","label":"Säugetier"}],
+            "elements":[{"id":"e1","text":"Hai","bucketId":"b1"},{"id":"e2","text":"Wal","bucketId":"b2"}]}"""
+        val result = grader.grade("CATEGORIZATION", payload, tree("""{"assignments":[{"elementId":"e1","bucketId":"b1"},{"elementId":"e2","bucketId":"b1"}]}"""))
+        result.score shouldBe 0.5f
+        result.outcome shouldBe AttemptOutcome.PARTIAL
+    }
+
+    @Test
+    fun `CODE_OUTPUT exact match scores 1`() {
+        val payload = """{"snippet":"print(1 + 1)","language":"python","expected":"2"}"""
+        val result = grader.grade("CODE_OUTPUT", payload, tree("""{"answer":"2"}"""))
+        result.score shouldBe 1f
+    }
+
+    @Test
+    fun `CODE_OUTPUT is case-sensitive unlike CLOZE`() {
+        val payload = """{"snippet":"print(True)","language":"python","expected":"True"}"""
+        val result = grader.grade("CODE_OUTPUT", payload, tree("""{"answer":"true"}"""))
+        result.score shouldBe 0f
+    }
+
+    @Test
+    fun `CODE_OUTPUT trims surrounding whitespace before comparing`() {
+        val payload = """{"snippet":"print(1 + 1)","language":"python","expected":"2"}"""
+        val result = grader.grade("CODE_OUTPUT", payload, tree("""{"answer":"  2  "}"""))
+        result.score shouldBe 1f
+    }
 }

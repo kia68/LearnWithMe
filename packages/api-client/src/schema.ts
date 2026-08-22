@@ -750,12 +750,30 @@ export interface components {
         BulkItemIdsRequest: {
             ids: string[];
         };
+        CategorizationBucket: {
+            id: string;
+            label: string;
+        };
+        CategorizationElement: {
+            id: string;
+            text: string;
+            bucketId: string;
+        };
+        CategorizationPayload: components["schemas"]["ItemPayload"] & {
+            buckets: components["schemas"]["CategorizationBucket"][];
+            elements: components["schemas"]["CategorizationElement"][];
+        };
         ClozeBlank: {
             accepted: string[];
         };
         ClozePayload: components["schemas"]["ItemPayload"] & {
             template: string;
             blanks: components["schemas"]["ClozeBlank"][];
+        };
+        CodeOutputPayload: components["schemas"]["ItemPayload"] & {
+            snippet: string;
+            language: string;
+            expected: string;
         };
         ItemPayload: unknown;
         ItemResponse: {
@@ -765,7 +783,7 @@ export interface components {
             conceptId: string;
             type: string;
             stem: string;
-            payload: components["schemas"]["ClozePayload"] | components["schemas"]["MatchingPayload"] | components["schemas"]["McMultiPayload"] | components["schemas"]["McSinglePayload"] | components["schemas"]["OrderingPayload"] | components["schemas"]["ShortAnswerPayload"] | components["schemas"]["TrueFalsePayload"];
+            payload: components["schemas"]["CategorizationPayload"] | components["schemas"]["ClozePayload"] | components["schemas"]["CodeOutputPayload"] | components["schemas"]["MatchingPayload"] | components["schemas"]["McMultiPayload"] | components["schemas"]["McSinglePayload"] | components["schemas"]["NumericPayload"] | components["schemas"]["OrderingPayload"] | components["schemas"]["ShortAnswerPayload"] | components["schemas"]["TrueFalsePayload"];
             explanation: string;
             bloomLevel: string;
             status: string;
@@ -802,6 +820,13 @@ export interface components {
         McSinglePayload: components["schemas"]["ItemPayload"] & {
             options: components["schemas"]["Option"][];
             shuffle: boolean;
+        };
+        NumericPayload: components["schemas"]["ItemPayload"] & {
+            /** Format: double */
+            value: number;
+            /** Format: double */
+            tolerance: number;
+            unit?: string;
         };
         Option: {
             id: string;

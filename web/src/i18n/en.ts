@@ -85,6 +85,13 @@ const en: Record<keyof typeof de, string> = {
   "item.shortAnswer.label": "Your answer",
   "item.shortAnswer.placeholder": "Type your answer …",
   "item.shortAnswer.grading": "Grading …",
+  "item.numeric.label": "Your answer",
+  "item.numeric.unitLabel": "Unit",
+  "item.categorization.instructions": "Assign each element to the right category.",
+  "item.categorization.unassigned": "— select —",
+  "item.codeOutput.instructions": "What does this code print?",
+  "item.codeOutput.label": "Expected output",
+  "item.codeOutput.placeholder": "Type the output …",
 
   "session.pendingGrade": "Previous answer is still being graded …",
   "session.gradedCorrect": "Previous answer: correct ({score}%).",

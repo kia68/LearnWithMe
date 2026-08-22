@@ -14,7 +14,7 @@ import kotlin.math.max
  * Kein LLM im Pfad (N1) — deshalb bewusst OHNE SHORT_ANSWER (Epic H): dessen Rubric-Bewertung
  * braucht zwingend einen LLM-Call und läuft daher asynchron über
  * assessment.internal.job.GradeFreeTextJobHandler, nicht hier — AttemptService.submit verzweigt
- * vor diesem Grader dorthin. NUMERIC/CATEGORIZATION bleiben weiterhin ohne Story-Bedarf.
+ * vor diesem Grader dorthin.
  */
 @Component
 class ResponseGrader {
@@ -29,6 +29,9 @@ class ResponseGrader {
             "ORDERING" -> gradeOrdering(payload, responseJson)
             "MATCHING" -> gradeMatching(payload, responseJson)
             "CLOZE" -> gradeCloze(payload, responseJson)
+            "NUMERIC" -> gradeNumeric(payload, responseJson)
+            "CATEGORIZATION" -> gradeCategorization(payload, responseJson)
+            "CODE_OUTPUT" -> gradeCodeOutput(payload, responseJson)
             else -> error("Unbekannter Fragetyp beim Grading: $type")
         }
     }
@@ -123,4 +126,40 @@ class ResponseGrader {
     }
 
     private fun normalize(text: String): String = text.trim().lowercase()
+
+    /** Binär, keine Teilpunkte (§10.3 listet NUMERIC nicht unter „Teilpunkte") — „ungefähr richtig"
+     * ist bei einer Zahl kein sinnvolles Zwischenergebnis, anders als bei MC_MULTI/ORDERING/etc. */
+    private fun gradeNumeric(payload: JsonNode, response: JsonNode): GradeResult {
+        val expectedValue = payload.path("value").asDouble()
+        val tolerance = payload.path("tolerance").asDouble()
+        val expectedUnit = payload.path("unit").takeIf { it.isTextual }?.asText()
+        val responseValue = response.path("answer").let { if (it.isMissingNode || it.isNull) Double.NaN else it.asDouble(Double.NaN) }
+        val responseUnit = response.path("unit").asText(null)
+        val withinTolerance = !responseValue.isNaN() && kotlin.math.abs(responseValue - expectedValue) <= tolerance
+        val unitOk = expectedUnit.isNullOrBlank() || responseUnit?.trim()?.equals(expectedUnit.trim(), ignoreCase = true) == true
+        val score = if (withinTolerance && unitOk) 1f else 0f
+        val correctJson = mapper.writeValueAsString(mapOf("answer" to expectedValue, "unit" to expectedUnit))
+        return GradeResult(score, outcomeFor(score), correctJson, null)
+    }
+
+    /** Teilpunkte analog MATCHING (§10.3 nennt CATEGORIZATION nicht explizit, aber strukturell
+     * dieselbe „ordne jedes Element korrekt zu"-Aufgabe wie MATCHING). */
+    private fun gradeCategorization(payload: JsonNode, response: JsonNode): GradeResult {
+        val correctAssignments = payload.path("elements").associate { it.path("id").asText() to it.path("bucketId").asText() }
+        val responseAssignments = response.path("assignments").associate { it.path("elementId").asText() to it.path("bucketId").asText() }
+        val matched = correctAssignments.count { (elementId, bucketId) -> responseAssignments[elementId] == bucketId }
+        val score = if (correctAssignments.isEmpty()) 0f else matched.toFloat() / correctAssignments.size
+        val correctJson = mapper.writeValueAsString(mapOf("assignments" to correctAssignments.map { (e, b) -> mapOf("elementId" to e, "bucketId" to b) }))
+        return GradeResult(score, outcomeFor(score), correctJson, null)
+    }
+
+    /** Exakter (nur getrimmter) Vergleich, KEINE Kleinschreibungs-Normalisierung wie bei CLOZE —
+     * Code-Ausgabe ist oft groß-/kleinschreibungssensitiv (siehe `CodeOutputPayload`-Kommentar). */
+    private fun gradeCodeOutput(payload: JsonNode, response: JsonNode): GradeResult {
+        val expected = payload.path("expected").asText().trim()
+        val answer = response.path("answer").asText("").trim()
+        val score = if (answer == expected) 1f else 0f
+        val correctJson = mapper.writeValueAsString(mapOf("answer" to expected))
+        return GradeResult(score, outcomeFor(score), correctJson, null)
+    }
 }

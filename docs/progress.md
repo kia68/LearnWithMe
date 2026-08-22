@@ -647,6 +647,64 @@ auf `main` nachgezogen, dritter Punkt (`packages/api-client`-Regenerierung) war 
   `SessionPage.tsx` behoben. Web-App-, Extension-Typecheck (`tsc -b`) und `vite build` für beide
   Pakete verifiziert.
 - **Noch offen** (aus Epic H unverändert übernommen): E5/Session-Finish-Edge-Case (dritter Punkt
-  oben), Extension nie live in Chrome geklickt (siehe Epic F), sowie die restliche M6-Arbeit
-  (`NUMERIC`/`CATEGORIZATION`/`HOTSPOT`/`CODE_OUTPUT`, Dozenten-Review-Workflow, QTI/Anki-Export) —
-  bewusst nicht Teil dieser Änderung.
+  oben), Extension nie live in Chrome geklickt (siehe Epic F) — **weiterhin offen**, siehe unten.
+  M6-Restarbeit: `NUMERIC`/`CATEGORIZATION`/`CODE_OUTPUT` sind jetzt gebaut (siehe nächster
+  Abschnitt), `HOTSPOT`/Dozenten-Review-Workflow/QTI-Anki-Export weiterhin nicht.
+
+## Nachtrag — Extension-Live-Test (Versuch) & M6: NUMERIC/CATEGORIZATION/CODE_OUTPUT
+
+- **Extension-Live-Test weiterhin nicht automatisierbar.** Erneut versucht (frischer `extension/dist`-
+  Build, dann `navigate` auf `chrome://extensions` im Automatisierungstab) — exakt derselbe Fehler
+  wie in Epic F dokumentiert: „Can't interact with browser-internal or unparseable URLs". Bestätigt
+  keine neue Information, nur dass sich daran nichts geändert hat. Bleibt ein manueller Schritt.
+- **Drei der vier fehlenden Fragetypen aus §10.1 gebaut: `NUMERIC`, `CATEGORIZATION`, `CODE_OUTPUT`**
+  (Prio S/C, löst den in Epic H als M6-Restarbeit vermerkten Punkt teilweise). `HOTSPOT` bewusst
+  ausgelassen — bräuchte eine eigene Bild-Asset-Pipeline (kein Ingestion-Pfad für Frage-Bilder in
+  dieser Codebase) plus Koordinaten-Hit-Testing im Client, deutlich größerer Zuschnitt als die
+  übrigen drei; siehe `ItemType`-Kommentar.
+  - **`NUMERIC`** (`value`/`tolerance`/`unit`): binäres Grading (kein Teilpunkt-Konzept für „fast
+    richtige Zahl", §10.3 listet den Typ dort auch nicht), Toleranzvergleich UND optionaler
+    Einheitsabgleich (case-insensitiv, nur wenn `unit` im Payload gesetzt ist). Web:
+    `NumericItem.tsx` — Zahlenfeld immer, Einheitsfeld nur wenn `payload.unit != null`.
+  - **`CATEGORIZATION`** (`buckets[]`, `elements[{id,text,bucketId}]`): Teilpunkte analog `MATCHING`
+    (Anteil korrekt zugeordneter Elemente) — strukturell dieselbe Zuordnungsaufgabe, §10.3 erwähnt
+    den Typ nicht explizit, aber die Analogie ist eng genug für dieselbe Bewertungslogik. Web:
+    `CategorizationItem.tsx`, natives `<select>` je Element wie bei `MatchingItem.tsx`.
+  - **`CODE_OUTPUT`** (`snippet`/`language`/`expected`): exakter, NUR getrimmter String-Vergleich —
+    bewusst OHNE `CLOZE`s Kleinschreibungs-Normalisierung, weil Code-Ausgabe oft
+    groß-/kleinschreibungssensitiv ist (Python `True` vs. `true`). Web: `CodeOutputItem.tsx`,
+    `<pre><code>` für den Snippet, einzeiliges Textfeld für die Antwort.
+  - Alle drei vollständig durchs bestehende Muster gezogen: `ItemPayload`+Validatoren,
+    `PayloadCodec`, `ItemDrafts`+`PromptBuilder`-Schema-Hints, `GenerationPipeline.requestDraft`,
+    `ResponseGrader.grade`, `SessionController.stripAnswerFields` (Härtung aus dem vorigen Nachtrag
+    sofort mit angewendet — `NUMERIC` verliert `value`, `CATEGORIZATION` verliert
+    `elements[].bucketId`, `CODE_OUTPUT` verliert `expected`). `GenerateItemsJobHandler` (Typ-
+    Rotation) und `ErrorClassifier`/`StructuralGate` brauchten wie schon bei `SHORT_ANSWER`
+    dokumentiert keine Änderung (generische `ItemType.entries`-Iteration bzw. generischer
+    `payload.validate(...)`-Aufruf).
+  - 22 neue Backend-Tests (`ItemPayloadValidationTest`, `PayloadCodecTest`-Roundtrips,
+    `ResponseGraderTest`, `SessionControllerTest`-Stripping) plus Web-Typecheck/Build für
+    `web`/`extension`/`packages/api-client`, alle grün.
+- **Echter, vorbestehender Produktions-Blocker gefunden und behoben: `V11__grant_sequence_usage.sql`.**
+  Bei der Live-Verifikation der drei neuen Typen (siehe unten) schlug der allererste echte
+  `POST /sessions/{id}/attempts`-Aufruf gegen den RLS-aktivierten Dev-Stack mit
+  `ERROR: permission denied for sequence attempts_id_seq` fehl (HTTP 500) — **kein Fehler in den
+  neuen Fragetypen**, sondern in Epic Gs V9-Migration: `GRANT ... ON ALL TABLES` deckt in Postgres
+  keine Sequenzen ab, `BIGSERIAL`-Spalten (`attempts.id`, `llm_usage.id`, `error_events.id` — die
+  einzigen drei Nicht-UUID-PKs) brauchen eine eigene `GRANT USAGE ON SEQUENCE`. Das bedeutet: **der
+  komplette kritische Antwort-Pfad (D4) war seit Epic G für die `learnwithme_app`-Rolle kaputt**,
+  unbemerkt, weil Epic Hs Live-Verifikation nur den `SHORT_ANSWER`-Pfad testete, der schon vorher am
+  fehlenden LLM-Key scheiterte (also nie bis zum tatsächlichen `attempts`-INSERT kam) — und Epic Gs
+  eigene Verifikation nur `GET /sources` testete, nie `POST attempts`. `V11` grantet `USAGE ON ALL
+  SEQUENCES` plus `ALTER DEFAULT PRIVILEGES ... ON SEQUENCES` (analog zu V9s Tabellen-Grant-Muster).
+  Nach der Migration end-to-end bestätigt: `NUMERIC` (Toleranz+Einheit), `CATEGORIZATION` (Teilpunkte-
+  Zuordnung) und `CODE_OUTPUT` liefern alle real `200` mit korrektem Feedback/Beleg gegen den
+  laufenden Dev-Stack (`docker exec`-geseedete Testdaten, echter Login/Session-Flow im
+  Automatisierungstab). **Dieser Fix betrifft auch alle sieben vorherigen Fragetypen** — nicht nur
+  M6-Nachtrag-spezifisch, sondern eine allgemeine Härtung, die jede echte Antwortabgabe seit Epic G
+  betraf.
+- **Noch offen:** `HOTSPOT` (Bild-Pipeline-Abhängigkeit), Dozenten-Review-Workflow, QTI/Anki-Export,
+  Extension-Live-Test (weiterhin manuell), Testcontainers-`RowLevelSecurityTest`/
+  `BackupRestoreProbeTest` gegen `V11` nur im echten CI verifizierbar (lokale Docker-Lücke dieser
+  Windows-Sandbox unverändert) — `V11` selbst ist aber bereits gegen den echten `docker compose`-
+  Dev-Stack (kein Testcontainers) verifiziert, s.o.

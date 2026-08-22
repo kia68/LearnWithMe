@@ -147,6 +147,11 @@ class SessionController(
                 if (blank is ObjectNode) blank.putArray("accepted")
             }
             "SHORT_ANSWER" -> payload.remove("referenceAnswer")
+            "NUMERIC" -> payload.remove("value")
+            "CATEGORIZATION" -> (payload.get("elements") as? ArrayNode)?.forEach { element ->
+                if (element is ObjectNode) element.remove("bucketId")
+            }
+            "CODE_OUTPUT" -> payload.remove("expected")
         }
     }
 

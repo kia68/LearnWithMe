@@ -82,6 +82,13 @@ const de = {
   "item.shortAnswer.label": "Deine Antwort",
   "item.shortAnswer.placeholder": "Antwort eingeben …",
   "item.shortAnswer.grading": "Wird bewertet …",
+  "item.numeric.label": "Deine Antwort",
+  "item.numeric.unitLabel": "Einheit",
+  "item.categorization.instructions": "Ordne jedes Element der richtigen Kategorie zu.",
+  "item.categorization.unassigned": "— auswählen —",
+  "item.codeOutput.instructions": "Was gibt dieser Code aus?",
+  "item.codeOutput.label": "Erwartete Ausgabe",
+  "item.codeOutput.placeholder": "Ausgabe eingeben …",
 
   "session.pendingGrade": "Vorherige Antwort wird noch bewertet …",
   "session.gradedCorrect": "Vorherige Antwort: richtig ({score}%).",

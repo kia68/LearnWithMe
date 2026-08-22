@@ -124,4 +124,69 @@ class ItemPayloadValidationTest {
         val payload = ShortAnswerPayload(rubric = listOf(RubricCriterion("Kriterium", 1)), referenceAnswer = "  ")
         payload.validate(2.0).any { it.code == "EMPTY_REFERENCE_ANSWER" } shouldBe true
     }
+
+    @Test
+    fun `valid NUMERIC has no issues`() {
+        val payload = NumericPayload(value = 42.0, tolerance = 0.5, unit = "kg")
+        payload.validate(2.0).size shouldBe 0
+    }
+
+    @Test
+    fun `NUMERIC with negative tolerance is rejected`() {
+        val payload = NumericPayload(value = 42.0, tolerance = -1.0)
+        payload.validate(2.0).any { it.code == "NEGATIVE_TOLERANCE" } shouldBe true
+    }
+
+    @Test
+    fun `NUMERIC with a blank unit is rejected`() {
+        val payload = NumericPayload(value = 42.0, tolerance = 0.5, unit = "  ")
+        payload.validate(2.0).any { it.code == "BLANK_UNIT" } shouldBe true
+    }
+
+    @Test
+    fun `valid CATEGORIZATION has no issues`() {
+        val payload = CategorizationPayload(
+            buckets = listOf(CategorizationBucket("b1", "Fisch"), CategorizationBucket("b2", "Säugetier")),
+            elements = listOf(
+                CategorizationElement("e1", "Hai", "b1"),
+                CategorizationElement("e2", "Wal", "b2"),
+                CategorizationElement("e3", "Lachs", "b1"),
+            ),
+        )
+        payload.validate(2.0).size shouldBe 0
+    }
+
+    @Test
+    fun `CATEGORIZATION with too few buckets is rejected`() {
+        val payload = CategorizationPayload(
+            buckets = listOf(CategorizationBucket("b1", "Fisch")),
+            elements = listOf(CategorizationElement("e1", "Hai", "b1"), CategorizationElement("e2", "Lachs", "b1"), CategorizationElement("e3", "Aal", "b1")),
+        )
+        payload.validate(2.0).any { it.code == "TOO_FEW_BUCKETS" } shouldBe true
+    }
+
+    @Test
+    fun `CATEGORIZATION with an element referencing an unknown bucket is rejected`() {
+        val payload = CategorizationPayload(
+            buckets = listOf(CategorizationBucket("b1", "Fisch"), CategorizationBucket("b2", "Säugetier")),
+            elements = listOf(
+                CategorizationElement("e1", "Hai", "b1"),
+                CategorizationElement("e2", "Wal", "b2"),
+                CategorizationElement("e3", "Adler", "b-unknown"),
+            ),
+        )
+        payload.validate(2.0).any { it.code == "UNKNOWN_BUCKET_REFERENCE" } shouldBe true
+    }
+
+    @Test
+    fun `valid CODE_OUTPUT has no issues`() {
+        val payload = CodeOutputPayload(snippet = "print(1 + 1)", language = "python", expected = "2")
+        payload.validate(2.0).size shouldBe 0
+    }
+
+    @Test
+    fun `CODE_OUTPUT with a blank expected output is rejected`() {
+        val payload = CodeOutputPayload(snippet = "print(1 + 1)", language = "python", expected = " ")
+        payload.validate(2.0).any { it.code == "EMPTY_EXPECTED" } shouldBe true
+    }
 }
