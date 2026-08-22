@@ -9,6 +9,7 @@ import AppShell from "./layout/AppShell";
 import ImportPage from "./pages/ImportPage";
 import LibraryPage from "./pages/LibraryPage";
 import ProgressPage from "./pages/ProgressPage";
+import ReviewPage from "./pages/ReviewPage";
 import SessionPage from "./pages/SessionPage";
 import SettingsPage from "./pages/SettingsPage";
 import SourceDetailPage from "./pages/SourceDetailPage";
@@ -25,6 +26,7 @@ function ProtectedArea() {
         <Route path="/import" element={<ImportPage />} />
         <Route path="/sources/:sourceId" element={<SourceDetailPage />} />
         <Route path="/sessions/:sessionId" element={<SessionPage />} />
+        <Route path="/review" element={<ReviewPage />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -703,8 +703,78 @@ auf `main` nachgezogen, dritter Punkt (`packages/api-client`-Regenerierung) war 
   Automatisierungstab). **Dieser Fix betrifft auch alle sieben vorherigen Fragetypen** — nicht nur
   M6-Nachtrag-spezifisch, sondern eine allgemeine Härtung, die jede echte Antwortabgabe seit Epic G
   betraf.
-- **Noch offen:** `HOTSPOT` (Bild-Pipeline-Abhängigkeit), Dozenten-Review-Workflow, QTI/Anki-Export,
-  Extension-Live-Test (weiterhin manuell), Testcontainers-`RowLevelSecurityTest`/
-  `BackupRestoreProbeTest` gegen `V11` nur im echten CI verifizierbar (lokale Docker-Lücke dieser
-  Windows-Sandbox unverändert) — `V11` selbst ist aber bereits gegen den echten `docker compose`-
-  Dev-Stack (kein Testcontainers) verifiziert, s.o.
+- **`V11` in echtem CI grün bestätigt** — GitHub-Actions-Lauf für den Commit mit V11
+  (`Backend CI`, Ubuntu-Runner, echte Testcontainers) erfolgreich; `RowLevelSecurityTest` lief mit
+  durch. **Aber**: der bestehende `RowLevelSecurityTest` testet ausschließlich `sources` (UUID-PK,
+  keine Sequenz) — er hätte den ursprünglichen V9-Sequence-Bug nie gefunden und beweist den `V11`-
+  Fix damit nicht direkt. Deshalb neu: `SequenceGrantTest` (INSERT in `llm_usage`, stellvertretend
+  für alle drei BIGSERIAL-Tabellen — der Fix ist tabellenunabhängig) — lokal wie erwartet an der
+  Docker/Testcontainers-Sandbox-Lücke gescheitert, muss noch im echten CI grün laufen (nächster Push).
+- **Noch offen:** `HOTSPOT` (Bild-Pipeline-Abhängigkeit), Extension-Live-Test (weiterhin manuell).
+
+## Nachtrag — Dozenten-Review-Workflow-Frontend & QTI/Anki-Export
+
+M6-Restarbeit fertiggestellt (Rest von PLAN.md §14/M6 nach den beiden vorigen Nachträgen):
+Review-UI für die seit Epic C bestehende, aber nie mit einem Frontend verbundene C7-Review-Queue,
+sowie Fragen-Export nach Anki und QTI 2.1. `HOTSPOT` und Extension-Live-Test bleiben offen (s.o.).
+
+- **Dozenten-Review-Workflow (C7-Frontend).** Neue Route `/review` (`ReviewPage.tsx`): Status-Filter
+  (DRAFT/PUBLISHED/REJECTED/RETIRED), Einzel-Publish/Reject, Mehrfachauswahl mit Bulk-Publish/-Reject.
+  **Wichtiger Unterschied zu jeder anderen Ansicht in der App:** `ReviewItemPayload.tsx` zeigt die
+  Frage MIT Lösung — anders als `ItemRenderer` (Lernenden-Sicht, Antworten seit dem ersten
+  Payload-Härtung-Nachtrag oben gezielt gefiltert) braucht ein Reviewer genau das, um die Qualität
+  zu beurteilen. Bewusst eine reine Textzusammenfassung pro Typ statt der interaktiven Lern-Widgets
+  wiederzuverwenden (ein Reviewer beantwortet die Frage nicht, er liest sie).
+  - **Vor dem UI-Bau die Backend-Serialisierung per curl verifiziert** (Lehre aus den beiden vorigen
+    Nachträgen: mehrfach Bugs in nie-vorher-über-echtes-HTTP-getesteten Endpunkten gefunden) —
+    `ItemResponse.payload: ItemPayload` (sealed interface, bewusst ohne Jackson-`@JsonTypeInfo`,
+    ADR-007) serialisiert korrekt über den tatsächlichen Laufzeittyp, keine Wiederholung des
+    Epic-F-`JsonNode`-Bean-Introspektions-Bugs. `publish`/`reject` ebenfalls einzeln per curl gegen
+    ein geseedetes DRAFT-Item bestätigt, bevor die UI draufgebaut wurde.
+  - End-to-end im Automatisierungstab verifiziert: Status-Wechsel DRAFT→PUBLISHED sowohl einzeln
+    als auch per Bulk-Auswahl, `CATEGORIZATION`/`CODE_OUTPUT`-Payload-Anzeige mit korrekt gruppierter
+    Lösung gegen echte Daten geprüft.
+- **Export nach Anki und QTI 2.1** (`authoring.internal.export.AnkiExporter`/`QtiExporter`, neuer
+  `GET /api/v1/sources/{sourceId}/export/{anki|qti}`-Endpunkt). Neue `authoring → content`-
+  Abhängigkeit (für `ContentApi.assertOwned`) — von `ApplicationModules.verify()` erlaubt, gleiche
+  Art Abweichung von der PLAN.md-§6.3-Tabelle wie schon `assessment` in Epic D.
+  - **Anki: Tab-getrennter Text statt `.apkg`.** Ankis eigener Text-Importer akzeptiert
+    `Front<TAB>Back` pro Zeile direkt (HTML in Feldern erlaubt, `<br>` für Zeilenumbrüche) — der
+    volle `.apkg`-Binärcontainer (SQLite + Media-Zip, `genanki`-Format) wäre für denselben Nutzwert
+    unverhältnismäßig aufwendiger. Pro Fragetyp eine Front/Back-Textdarstellung MIT Lösung (wie beim
+    Review — hier ist der Endnutzer der Lernende selbst, der bewusst schummeln will/die Lösung sehen
+    soll, bevor Anki die Karte in Wiederholung nimmt).
+  - **QTI: 2.1 `assessmentItem`-XML, ein File pro Frage, unverpackt als ZIP** (kein
+    `imsmanifest.xml`/vollständiges Content-Package — die meisten Importer akzeptieren einzelne
+    Dateien auch ohne Manifest, und ein Manifest bräuchte Metadaten über eine Testzusammenstellung,
+    die es in diesem Datenmodell nicht gibt). Nicht jeder eigene Typ hat eine 1:1-QTI-Entsprechung,
+    dokumentierte Vereinfachungen direkt im Code (`QtiExporter`-Kommentar):
+    - `MC_SINGLE`/`MC_MULTI`/`TRUE_FALSE` → `choiceInteraction`, `ORDERING` → `orderInteraction`,
+      `MATCHING`/`CATEGORIZATION` → `matchInteraction` (strukturell identisch: Element→Bucket ist
+      dieselbe gerichtete Zuordnung wie Links→Rechts) — alle vier sauber 1:1 abbildbar.
+    - `NUMERIC` → `textEntryInteraction` mit **echter** Toleranzprüfung über eigenes
+      `responseProcessing` (`<gte>`/`<lte>` statt eines verlustbehafteten Standard-Templates, das
+      QTI 2.1 für Toleranzbereiche nicht anbietet) — verliert nur die `unit`-Prüfung (kein
+      QTI-2.1-Äquivalent), die Einheit steht stattdessen im Aufgabentext.
+    - `CLOZE` → mehrere `textEntryInteraction`s mit eigenem `RESPONSE_n` je Lücke, `correctResponse`
+      ist der ERSTE akzeptierte Wert (verliert das „mehrere akzeptiert"-Konzept unseres eigenen
+      `ResponseGrader.gradeCloze`).
+    - `SHORT_ANSWER` → `extendedTextInteraction` ohne `correctResponse` (QTI kennt kein
+      LLM-Rubric-Scoring); Rubric + Musterantwort landen in einem `<rubricBlock view="scorer">` für
+      menschliche Prüfer im Zielsystem.
+    - `CODE_OUTPUT` → `textEntryInteraction`, exakter String-Vergleich (verliert nichts gegenüber
+      dem eigenen Grading, das ohnehin exakt ist).
+  - **Kein QTI-2.1-XSD lokal verfügbar** (kein HTTPS-Egress in dieser Sandbox, siehe Epic F) — keine
+    echte Schema-Validierung möglich. Stattdessen: 13 neue Tests (`AnkiExporterTest`/
+    `QtiExporterTest`) prüfen TSV-Struktur bzw. XML-Wohlgeformtheit (Namespace-bewusstes XPath) und
+    dass die fachlich korrekte Antwort an der laut QTI-2.1-Spezifikation richtigen Stelle landet
+    (`correctResponse`-Werte, `responseProcessing`-Toleranzgrenzen). **Zusätzlich** end-to-end gegen
+    den echten Dev-Stack verifiziert: `curl`-Downloads beider Formate gegen die sechs echten
+    geseedeten Items, QTI-ZIP entpackt und alle sechs erzeugten XML-Dateien mit .NETs
+    `System.Xml.XmlDocument` als wohlgeformt bestätigt (kein `xmllint`/`python3` in dieser Windows-
+    Sandbox verfügbar) — sowie beide Download-Buttons im Automatisierungstab geklickt, Netzwerk-Log
+    bestätigt `200` für beide Endpunkte.
+  - **Web:** zwei Download-Buttons auf `SourceDetailPage`. Kein `<a href>` möglich (bräuchte den
+    Bearer-Token in der URL) — `authFetch` (bislang seit dessen eigener Regenerierungs-Ablösung im
+    ersten Payload-Härtung-Nachtrag ungenutzt, jetzt hierfür reaktiviert) lädt den Blob,
+    `URL.createObjectURL` + unsichtbarer `<a download>`-Klick löst den Browser-Download aus.

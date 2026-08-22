@@ -21,6 +21,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {t("nav.library")}
           </NavLink>
           <NavLink to="/import">{t("nav.import")}</NavLink>
+          <NavLink to="/review">{t("nav.review")}</NavLink>
           <NavLink to="/progress">{t("nav.progress")}</NavLink>
           <NavLink to="/settings">{t("nav.settings")}</NavLink>
         </nav>

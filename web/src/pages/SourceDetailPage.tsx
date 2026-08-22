@@ -1,8 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../api/client";
+import { api, authFetch } from "../api/client";
 import { useTranslation, type TranslationKey } from "../i18n";
+
+/** M6-Nachtrag (PLAN.md §14 Export): Backend liefert die Datei als authentifizierten Download
+ * (`Content-Disposition: attachment`), kein `<a href>` möglich (bräuchte den Bearer-Token in der
+ * URL) — Blob laden, Object-URL erzeugen, per unsichtbarem `<a>` auslösen, wieder aufräumen. */
+async function downloadFile(path: string, fallbackFilename: string) {
+  const response = await authFetch(path);
+  if (!response.ok) return;
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition");
+  const filename = disposition?.match(/filename="?([^";]+)"?/)?.[1] ?? fallbackFilename;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function SourceDetailPage() {
   const { sourceId } = useParams<{ sourceId: string }>();
@@ -68,15 +85,23 @@ export default function SourceDetailPage() {
               <h1>{source.title}</h1>
               <span className="badge">{t(`library.status.${source.status}` as TranslationKey)}</span>
             </div>
-            {source.status === "READY" || source.status === "PARTIAL" ? (
-              <button
-                className="btn btn-primary"
-                onClick={() => startSessionMutation.mutate({ scopeKind: "SOURCE" })}
-                disabled={startSessionMutation.isPending}
-              >
-                {t("library.startSession")}
+            <div className="row">
+              <button className="btn" onClick={() => void downloadFile(`/api/v1/sources/${sourceId}/export/anki`, `anki-export-${sourceId}.txt`)}>
+                {t("source.exportAnki")}
               </button>
-            ) : null}
+              <button className="btn" onClick={() => void downloadFile(`/api/v1/sources/${sourceId}/export/qti`, `qti-export-${sourceId}.zip`)}>
+                {t("source.exportQti")}
+              </button>
+              {source.status === "READY" || source.status === "PARTIAL" ? (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => startSessionMutation.mutate({ scopeKind: "SOURCE" })}
+                  disabled={startSessionMutation.isPending}
+                >
+                  {t("library.startSession")}
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <section className="stack">
