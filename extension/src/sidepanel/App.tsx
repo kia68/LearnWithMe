@@ -7,6 +7,14 @@ type SourceResponse = components["schemas"]["SourceResponse"];
 type NextItemResponse = components["schemas"]["NextItemResponse"];
 type SubmitAttemptResponse = components["schemas"]["SubmitAttemptResponse"];
 
+/** Epic H: `POST attempts` kann jetzt auch `PendingAttemptResponse` (202, `SHORT_ANSWER`) liefern —
+ * das Side-Panel unterstützt `SHORT_ANSWER` inline aber ohnehin nicht (`isSupported`-Gate unten,
+ * siehe docs/progress.md „Bekannte Lücken" Epic H), dieser Zweig ist zur Laufzeit also unerreichbar,
+ * braucht aber eine Typ-Engführung, seit der generierte Client beide Formen unterscheidet. */
+function isSubmitAttemptResponse(data: SubmitAttemptResponse | components["schemas"]["PendingAttemptResponse"]): data is SubmitAttemptResponse {
+  return "attemptId" in data;
+}
+
 interface CapturedSelection {
   html: string;
   text: string;
@@ -241,7 +249,7 @@ function SessionView({
       params: { path: { id: sessionId } },
       body: { itemId: currentItem.itemId, response, elapsedMs: Date.now() - itemStartedAt.current },
     });
-    if (data) setResult(data);
+    if (data && isSubmitAttemptResponse(data)) setResult(data);
   }
 
   async function advance() {

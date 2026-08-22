@@ -17,6 +17,7 @@ import de.optadata.odil.learnwithme.authoring.AuthoringApi
 import de.optadata.odil.learnwithme.authoring.PublishedItemView
 import de.optadata.odil.learnwithme.content.ChunkView
 import de.optadata.odil.learnwithme.content.ContentApi
+import de.optadata.odil.learnwithme.platform.JobOutcome
 import de.optadata.odil.learnwithme.platform.JobQueue
 import de.optadata.odil.learnwithme.platform.JobType
 import de.optadata.odil.learnwithme.shared.ConflictException
@@ -47,6 +48,12 @@ data class SkipResult(val next: SelectedItem?)
 sealed interface GradeStatus {
     data object Pending : GradeStatus
     data class Graded(val result: AttemptResult) : GradeStatus
+
+    /** Härtung: `GRADE_FREE_TEXT` scheiterte nach `JobWorker.MAX_ATTEMPTS` Versuchen endgültig
+     * (vorher blieb der Poll-Endpunkt für immer bei [Pending] stehen, ohne dass der Client das von
+     * einem noch laufenden Job unterscheiden konnte — siehe `docs/progress.md` „Bekannte Lücken"
+     * Epic H). Die Antwort selbst ist nicht verloren (`jobs.payload` behält sie), nur ungegradet. */
+    data class Failed(val lastError: String?) : GradeStatus
 }
 
 /** Epic H (E4): `SHORT_ANSWER` braucht einen LLM-Call zum Graden, der kritische Pfad (N1) darf
@@ -88,7 +95,7 @@ class AttemptService(
         if (item.type == "SHORT_ANSWER") {
             jobQueue.enqueue(
                 JobType.GRADE_FREE_TEXT,
-                "grade:$sessionId:$itemId:${System.currentTimeMillis()}",
+                "${gradeJobKeyPrefix(sessionId, itemId)}${System.currentTimeMillis()}",
                 workspaceId,
                 mapOf(
                     "workspaceId" to workspaceId.toString(),
@@ -138,6 +145,8 @@ class AttemptService(
 
     private fun freeTextReferenceAnswer(item: PublishedItemView): String =
         mapper.readTree(item.payloadJson).path("referenceAnswer").asText("")
+
+    private fun gradeJobKeyPrefix(sessionId: UUID, itemId: UUID): String = "grade:$sessionId:$itemId:"
 
     private fun finalize(
         workspaceId: UUID,
@@ -217,7 +226,10 @@ class AttemptService(
      * also identisch mit dem, was direkt nach dem Grading zurückgekommen wäre. */
     fun gradeStatus(workspaceId: UUID, sessionId: UUID, itemId: UUID): GradeStatus {
         session(workspaceId, sessionId) // wirft NotFoundException, wenn die Session nicht zum Workspace gehört
-        val attempt = attemptRepository.findFirstBySessionIdAndItemIdOrderByCreatedAtDesc(sessionId, itemId) ?: return GradeStatus.Pending
+        val attempt = attemptRepository.findFirstBySessionIdAndItemIdOrderByCreatedAtDesc(sessionId, itemId) ?: run {
+            val jobStatus = jobQueue.statusByKeyPrefix(workspaceId, gradeJobKeyPrefix(sessionId, itemId))
+            return if (jobStatus?.outcome == JobOutcome.FAILED) GradeStatus.Failed(jobStatus.lastError) else GradeStatus.Pending
+        }
 
         val item = authoringApi.getPublished(workspaceId, itemId)
         val evidenceChunk = contentApi.getChunk(item.sourceChunkId)

@@ -420,6 +420,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{id}/items/{itemId}/grade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["gradeStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/weekly": {
         parameters: {
             query?: never;
@@ -636,13 +652,12 @@ export interface components {
             /** Format: float */
             expectedSuccess: number;
         };
-        JsonNode: unknown;
         NextItemResponse: {
             /** Format: uuid */
             itemId: string;
             type: string;
             stem: string;
-            payload: components["schemas"]["JsonNode"];
+            payload: unknown;
             meta: components["schemas"]["ItemMeta"];
         };
         SessionResponse: {
@@ -681,7 +696,7 @@ export interface components {
         SubmitAttemptRequest: {
             /** Format: uuid */
             itemId: string;
-            response: components["schemas"]["JsonNode"];
+            response: unknown;
             /** Format: int32 */
             elapsedMs: number;
         };
@@ -701,7 +716,7 @@ export interface components {
             page?: number;
         };
         FeedbackResponse: {
-            correctResponse: components["schemas"]["JsonNode"];
+            correctResponse: unknown;
             explanation: string;
             chosenOptionRationale?: string;
             evidence?: components["schemas"]["EvidenceResponse"];
@@ -729,6 +744,9 @@ export interface components {
             learnerUpdate: components["schemas"]["LearnerUpdateResponse"];
             next?: components["schemas"]["NextItemResponse"];
         };
+        PendingAttemptResponse: {
+            next?: components["schemas"]["NextItemResponse"];
+        };
         BulkItemIdsRequest: {
             ids: string[];
         };
@@ -747,7 +765,7 @@ export interface components {
             conceptId: string;
             type: string;
             stem: string;
-            payload: components["schemas"]["ClozePayload"] | components["schemas"]["MatchingPayload"] | components["schemas"]["McMultiPayload"] | components["schemas"]["McSinglePayload"] | components["schemas"]["OrderingPayload"] | components["schemas"]["TrueFalsePayload"];
+            payload: components["schemas"]["ClozePayload"] | components["schemas"]["MatchingPayload"] | components["schemas"]["McMultiPayload"] | components["schemas"]["McSinglePayload"] | components["schemas"]["OrderingPayload"] | components["schemas"]["ShortAnswerPayload"] | components["schemas"]["TrueFalsePayload"];
             explanation: string;
             bloomLevel: string;
             status: string;
@@ -800,6 +818,15 @@ export interface components {
             elements: components["schemas"]["OrderingElement"][];
             correctOrder: string[];
             partialCredit: boolean;
+        };
+        RubricCriterion: {
+            criterion: string;
+            /** Format: int32 */
+            points: number;
+        };
+        ShortAnswerPayload: components["schemas"]["ItemPayload"] & {
+            rubric: components["schemas"]["RubricCriterion"][];
+            referenceAnswer: string;
         };
         TrueFalsePayload: components["schemas"]["ItemPayload"] & {
             statement: string;
@@ -913,6 +940,18 @@ export interface components {
         SseEmitter: {
             /** Format: int64 */
             timeout?: number;
+        };
+        GradeStatusResponse: {
+            status: string;
+            /** Format: int64 */
+            attemptId?: number;
+            outcome?: string;
+            /** Format: float */
+            score?: number;
+            feedback?: components["schemas"]["FeedbackResponse"];
+            errorAnalysis?: components["schemas"]["ErrorAnalysisResponse"];
+            learnerUpdate?: components["schemas"]["LearnerUpdateResponse"];
+            error?: string;
         };
         WeeklyReportGapResponse: {
             /** Format: uuid */
@@ -1196,6 +1235,15 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["SubmitAttemptResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PendingAttemptResponse"];
                 };
             };
         };
@@ -1681,6 +1729,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["NextItemResponse"];
+                };
+            };
+        };
+    };
+    gradeStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GradeStatusResponse"];
                 };
             };
         };

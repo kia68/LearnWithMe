@@ -1,7 +1,9 @@
 package de.optadata.odil.learnwithme.platform.internal.job
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.optadata.odil.learnwithme.platform.JobOutcome
 import de.optadata.odil.learnwithme.platform.JobQueue
+import de.optadata.odil.learnwithme.platform.JobStatusView
 import de.optadata.odil.learnwithme.platform.JobType
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -19,5 +21,15 @@ class JobQueueImpl(private val jobRepository: JobRepository) : JobQueue {
             JobEntity(jobKey = jobKey, type = type, workspaceId = workspaceId, payload = objectMapper.writeValueAsString(payload)),
         )
         return job.id
+    }
+
+    override fun statusByKeyPrefix(workspaceId: UUID, jobKeyPrefix: String): JobStatusView? {
+        val job = jobRepository.findFirstByWorkspaceIdAndJobKeyStartingWithOrderByCreatedAtDesc(workspaceId, jobKeyPrefix) ?: return null
+        val outcome = when (job.status) {
+            JobStatus.DONE -> JobOutcome.DONE
+            JobStatus.FAILED -> JobOutcome.FAILED
+            JobStatus.PENDING, JobStatus.RUNNING -> JobOutcome.PENDING
+        }
+        return JobStatusView(outcome, job.lastError)
     }
 }

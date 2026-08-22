@@ -90,6 +90,7 @@ const en: Record<keyof typeof de, string> = {
   "session.gradedCorrect": "Previous answer: correct ({score}%).",
   "session.gradedPartial": "Previous answer: partially correct ({score}%).",
   "session.gradedIncorrect": "Previous answer: not quite ({score}%).",
+  "session.gradeFailed": "Grading the previous answer failed. Your answer was saved, but won't count in this session's summary.",
 
   "progress.title": "Progress",
   "progress.overview": "Overview",

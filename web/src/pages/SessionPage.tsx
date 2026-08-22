@@ -1,7 +1,7 @@
 import type { components } from "@learnwithme/api-client";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, authFetch } from "../api/client";
+import { api } from "../api/client";
 import FeedbackPanel from "../components/FeedbackPanel";
 import ItemRenderer from "../components/items/ItemRenderer";
 import type { ItemResponseBody } from "../components/items/types";
@@ -10,16 +10,11 @@ import { useTranslation, type TranslationKey } from "../i18n";
 type NextItemResponse = components["schemas"]["NextItemResponse"];
 type SubmitAttemptResponse = components["schemas"]["SubmitAttemptResponse"];
 type FinishSessionResponse = components["schemas"]["FinishSessionResponse"];
+type PendingAttemptResponse = components["schemas"]["PendingAttemptResponse"];
+type GradeStatusResponse = components["schemas"]["GradeStatusResponse"];
 
-/** Epic H: noch nicht im generierten Client (siehe items/types.ts-Kommentar) — von Hand passend
- * zu `assessment.internal.web.dto.PendingAttemptResponse`/`GradeStatusResponse` nachgezogen. */
-interface PendingAttemptResponse {
-  next: NextItemResponse | null;
-}
-interface GradeStatusResponse {
-  status: "PENDING" | "GRADED";
-  outcome: string | null;
-  score: number | null;
+function isSubmitAttemptResponse(data: SubmitAttemptResponse | PendingAttemptResponse): data is SubmitAttemptResponse {
+  return "attemptId" in data;
 }
 
 /**
@@ -54,18 +49,19 @@ export default function SessionPage() {
     let attempts = 0;
     const interval = setInterval(() => {
       attempts += 1;
-      void authFetch(`/api/v1/sessions/${sessionId}/items/${pendingGradeItemId}/grade`).then(async (res) => {
-        if (cancelled || !res.ok) return;
-        const status = (await res.json()) as GradeStatusResponse;
-        if (status.status === "GRADED") {
-          setPendingGradeOutcome(status);
-          setPendingGradeItemId(null);
-        } else if (attempts >= 30) {
-          // Nach ~75s aufgeben statt endlos zu pollen (z.B. Job dauerhaft fehlgeschlagen) —
-          // die Antwort bleibt trotzdem gespeichert, nur ohne UI-Rückmeldung hier.
-          setPendingGradeItemId(null);
-        }
-      });
+      void api
+        .GET("/api/v1/sessions/{id}/items/{itemId}/grade", { params: { path: { id: sessionId, itemId: pendingGradeItemId } } })
+        .then(({ data }) => {
+          if (cancelled || !data) return;
+          if (data.status === "GRADED" || data.status === "FAILED") {
+            setPendingGradeOutcome(data);
+            setPendingGradeItemId(null);
+          } else if (attempts >= 30) {
+            // Nach ~75s aufgeben statt endlos zu pollen (Job dauerhaft hängend) — die Antwort
+            // bleibt trotzdem gespeichert, nur ohne UI-Rückmeldung hier.
+            setPendingGradeItemId(null);
+          }
+        });
     }, 2500);
     return () => {
       cancelled = true;
@@ -109,15 +105,13 @@ export default function SessionPage() {
     setAttemptCount((c) => c + 1);
 
     if (httpResponse.status === 202) {
-      // Epic H: SHORT_ANSWER — kein Feedback jetzt, `next` kommt trotzdem sofort (optimistisches
-      // UI). `data` ist hier eigentlich ein PendingAttemptResponse, im (noch nicht regenerierten)
-      // Client-Typ aber als SubmitAttemptResponse deklariert — s. Kommentar oben.
+      // Epic H: SHORT_ANSWER — kein Feedback jetzt, `next` kommt trotzdem sofort (optimistisches UI).
       setPendingGradeItemId(submittedItemId);
       setPendingGradeOutcome(null);
-      advanceTo((data as unknown as PendingAttemptResponse | undefined)?.next ?? null);
+      advanceTo(data?.next ?? null);
       return;
     }
-    if (data) setResult(data);
+    if (data && isSubmitAttemptResponse(data)) setResult(data);
   }
 
   async function skip() {
@@ -183,7 +177,10 @@ export default function SessionPage() {
       {(pendingGradeItemId || pendingGradeOutcome) && (
         <p className="badge" role="status" aria-live="polite">
           {pendingGradeItemId && t("session.pendingGrade")}
-          {pendingGradeOutcome && t(gradeOutcomeKey(pendingGradeOutcome.outcome), { score: Math.round((pendingGradeOutcome.score ?? 0) * 100) })}
+          {pendingGradeOutcome &&
+            (pendingGradeOutcome.status === "FAILED"
+              ? t("session.gradeFailed")
+              : t(gradeOutcomeKey(pendingGradeOutcome.outcome ?? null), { score: Math.round((pendingGradeOutcome.score ?? 0) * 100) }))}
         </p>
       )}
       <div className="row" style={{ justifyContent: "space-between" }}>

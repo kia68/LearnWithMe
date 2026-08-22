@@ -87,6 +87,7 @@ const de = {
   "session.gradedCorrect": "Vorherige Antwort: richtig ({score}%).",
   "session.gradedPartial": "Vorherige Antwort: teilweise richtig ({score}%).",
   "session.gradedIncorrect": "Vorherige Antwort: leider falsch ({score}%).",
+  "session.gradeFailed": "Bewertung der vorherigen Antwort fehlgeschlagen. Deine Antwort ist gespeichert, zählt aber nicht in dieser Zusammenfassung.",
 
   "progress.title": "Fortschritt",
   "progress.overview": "Übersicht",

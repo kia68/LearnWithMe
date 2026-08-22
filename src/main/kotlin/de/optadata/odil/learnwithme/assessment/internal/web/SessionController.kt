@@ -1,5 +1,6 @@
 package de.optadata.odil.learnwithme.assessment.internal.web
 
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import de.optadata.odil.learnwithme.assessment.internal.domain.Session
 import de.optadata.odil.learnwithme.assessment.internal.domain.SessionGoalKind
@@ -103,6 +104,7 @@ class SessionController(
             val r = status.result.toResponse()
             GradeStatusResponse("GRADED", r.attemptId, r.outcome, r.score, r.feedback, r.errorAnalysis, r.learnerUpdate)
         }
+        is GradeStatus.Failed -> GradeStatusResponse("FAILED", null, null, null, null, null, null, status.lastError)
     }
 
     @PostMapping("/api/v1/sessions/{id}/skip")
@@ -119,15 +121,38 @@ class SessionController(
     private fun Session.toResponse(next: NextItemResponse?) =
         SessionResponse(id, scopeKind.name, scopeId, goalKind.name, goalValue, startedAt, endedAt, next)
 
-    /** Epic H: `referenceAnswer` aus dem an den Client gehenden Payload entfernen — anders als bei
-     * den anderen Typen (wo die Lösung in einem Array aus mehreren Optionen versteckt liegt, siehe
-     * `docs/progress.md`-Notiz zur allgemeineren, hier bewusst nicht mit angegangenen Lücke) wäre
-     * das bei `SHORT_ANSWER` ein einzelnes, klar benanntes Top-Level-Feld — trivial im
-     * Network-Tab ablesbar und die ganze Frage sinnlos machend. `rubric` bleibt sichtbar (PLAN.md
-     * §4.2 E4 will das explizit). */
+    /** Härtung (Epic H entdeckte das Muster erstmals bei `SHORT_ANSWER`s `referenceAnswer`, siehe
+     * `docs/progress.md` „Bekannte Lücken" — hier auf alle sieben Typen ausgeweitet): jedes Feld,
+     * das die Lösung trägt, wird aus dem an den Client gehenden `next`-Payload entfernt, bevor eine
+     * Antwort abgegeben wurde — trivial im Network-Tab ablesbar sonst und die Frage sinnlos machend.
+     * Betrifft NUR den Vorschau-Pfad (`next`/`peekNext`); `AttemptResult.toResponse()` nach dem
+     * Absenden zeigt die Lösung weiterhin vollständig (D4-Feedback braucht sie). `rubric` bei
+     * `SHORT_ANSWER` bleibt sichtbar (PLAN.md §4.2 E4 will das explizit). */
+    private fun stripAnswerFields(type: String, payload: ObjectNode) {
+        when (type) {
+            "MC_SINGLE", "MC_MULTI" -> (payload.get("options") as? ArrayNode)?.forEach { option ->
+                if (option is ObjectNode) {
+                    option.remove("correct")
+                    option.remove("rationale")
+                    option.remove("misconceptionCategory")
+                }
+            }
+            "TRUE_FALSE" -> {
+                payload.remove("answer")
+                payload.remove("rationale")
+            }
+            "ORDERING" -> payload.remove("correctOrder")
+            "MATCHING" -> payload.remove("pairs")
+            "CLOZE" -> (payload.get("blanks") as? ArrayNode)?.forEach { blank ->
+                if (blank is ObjectNode) blank.putArray("accepted")
+            }
+            "SHORT_ANSWER" -> payload.remove("referenceAnswer")
+        }
+    }
+
     private fun SelectedItem?.toResponse(): NextItemResponse? = this?.let {
         val payload = mapper.readTree(it.payloadJson)
-        if (payload is ObjectNode && it.type == "SHORT_ANSWER") payload.remove("referenceAnswer")
+        if (payload is ObjectNode) stripAnswerFields(it.type, payload)
         NextItemResponse(it.itemId, it.type, it.stem, mapper.convertValue(payload, Any::class.java), ItemMeta(it.conceptId, it.expectedSuccess))
     }
 

@@ -59,8 +59,10 @@ data class SubmitAttemptResponse(
  * das eigentliche Grade-Ergebnis folgt asynchron über `GET .../items/{itemId}/grade`. */
 data class PendingAttemptResponse(val next: NextItemResponse?)
 
-/** Poll-Ziel für [PendingAttemptResponse] (Epic H). [status] ist `"PENDING"` oder `"GRADED"` —
- * die übrigen Felder sind nur im `"GRADED"`-Fall gesetzt. */
+/** Poll-Ziel für [PendingAttemptResponse] (Epic H). [status] ist `"PENDING"`, `"GRADED"` oder
+ * `"FAILED"` (Härtung: `GRADE_FREE_TEXT` nach `JobWorker.MAX_ATTEMPTS` Versuchen endgültig
+ * gescheitert, siehe `docs/progress.md`) — die Grade-Felder sind nur im `"GRADED"`-Fall,
+ * [error] nur im `"FAILED"`-Fall gesetzt. */
 data class GradeStatusResponse(
     val status: String,
     val attemptId: Long?,
@@ -69,6 +71,7 @@ data class GradeStatusResponse(
     val feedback: FeedbackResponse?,
     val errorAnalysis: ErrorAnalysisResponse?,
     val learnerUpdate: LearnerUpdateResponse?,
+    val error: String? = null,
 )
 
 data class SkipRequest(val itemId: UUID, val reason: String? = null)

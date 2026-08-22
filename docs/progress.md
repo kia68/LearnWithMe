@@ -606,3 +606,47 @@ Branch: `epicH`. Siebter Fragetyp (§10.1), löst die in Epic E dokumentierte Bl
   bleibt stehen. Seltener Fall (Job braucht normalerweise Sekunden), keine Korrektur gebaut.
 - **Extension** unverändert — `SHORT_ANSWER` fällt automatisch in den bereits bestehenden
   „nicht inline unterstützt, auf Web-App verlinken"-Zweig (wie ORDERING/MATCHING/CLOZE).
+
+## Nachtrag — Systemweite Payload-Härtung & Job-Sichtbarkeit (nach Epic H)
+
+Kein eigenes Epic — zwei der oben unter „Bekannte Lücken (Epic H)" dokumentierten Punkte direkt
+auf `main` nachgezogen, dritter Punkt (`packages/api-client`-Regenerierung) war Voraussetzung dafür.
+
+- **Payload-Leak (erster Punkt oben) behoben, für alle sieben Typen.** `SessionController.stripAnswerFields`
+  entfernt jetzt vor jedem `next`-Payload typspezifisch die lösungstragenden Felder: MC_SINGLE/
+  MC_MULTI (`options[].correct`/`.rationale`/`.misconceptionCategory`), TRUE_FALSE (`answer`/
+  `rationale`), ORDERING (`correctOrder`), MATCHING (`pairs`), CLOZE (`blanks[].accepted`, auf
+  leeres Array statt Entfernen — die Blank-*Anzahl* muss erhalten bleiben, der Client zählt sie für
+  die Eingabefelder), SHORT_ANSWER weiterhin `referenceAnswer` (unverändert aus Epic H). Vor der
+  Änderung anhand aller sechs bereits existierenden Item-Renderer (`web/src/components/items/*.tsx`)
+  verifiziert, dass keiner davon vor der Antwort etwas anderes als `id`/`text`/`statement`/
+  `elements`/`left`/`right`/`distractorsRight`/`template` liest — die entfernten Felder werden also
+  ausschließlich für die Nach-der-Antwort-Anzeige gebraucht (`AttemptResult.toResponse()`, dort
+  bewusst unverändert vollständig). Abgesichert durch `SessionControllerTest` (neu, sieben Fälle,
+  kein Spring-Kontext nötig — Controller ist ein einfacher konstruierbarer Typ mit zwei mockbaren
+  Services).
+- **Job-Fehlschlag-Sichtbarkeit (zweiter Punkt oben) behoben.** `platform.JobQueue` bekommt einen
+  neuen Port `statusByKeyPrefix` (+ öffentliche `JobOutcome`/`JobStatusView`-Typen) — nötig, weil der
+  Poll-Endpunkt nur `sessionId`/`itemId` kennt, nicht den vollen `jobKey` (der trägt zusätzlich einen
+  Enqueue-Zeitstempel). `AttemptService.gradeStatus` prüft bei fehlender `Attempt`-Zeile jetzt den
+  Job-Status: `FAILED` → neuer `GradeStatus.Failed`-Zweig → `GradeStatusResponse{status:"FAILED",
+  error}`. `SessionPage.tsx` zeigt dafür einen eigenen Hinweistext (`session.gradeFailed`, DE/EN)
+  statt für immer weiterzupollen. Abgesichert durch `AttemptServiceGradeStatusTest` (neu, drei
+  Fälle: FAILED/noch laufend/kein passender Job — alle Abhängigkeiten gemockt, kein Spring-Kontext).
+- **`packages/api-client` neu generiert** — die JDK-Instabilität aus der Epic-H-Session trat hier
+  nicht auf; `./gradlew bootRun --args='--spring.profiles.active=local'` lief durch (ein verwaister
+  Prozess von einem fehlgeschlagenen ersten Hintergrund-Start blockierte kurzzeitig Port 8080,
+  beendet). `ShortAnswerPayload`/`PendingAttemptResponse`/`GradeStatusResponse` sind jetzt echte
+  generierte Typen; die Epic-H-Handschrift-Typen und der rohe `authFetch`-Umweg (`api/client.ts`)
+  sind raus, `SessionPage.tsx` pollt jetzt über `api.GET`. Der neue Response-Typ von `POST attempts`
+  (`SubmitAttemptResponse | PendingAttemptResponse`, jetzt korrekt unions statt nur ersterer) deckte
+  dabei eine vorbestehende, bisher durch den veralteten Schema-Stand verdeckte Typlücke im
+  Extension-Side-Panel auf (`extension/src/sidepanel/App.tsx`) — zur Laufzeit unerreichbar (Side
+  Panel sendet nie eine `SHORT_ANSWER`-Antwort, siehe „Extension"-Punkt oben), aber ohne
+  Typ-Engführung ein Compile-Fehler; per derselben `isSubmitAttemptResponse`-Diskriminante wie in
+  `SessionPage.tsx` behoben. Web-App-, Extension-Typecheck (`tsc -b`) und `vite build` für beide
+  Pakete verifiziert.
+- **Noch offen** (aus Epic H unverändert übernommen): E5/Session-Finish-Edge-Case (dritter Punkt
+  oben), Extension nie live in Chrome geklickt (siehe Epic F), sowie die restliche M6-Arbeit
+  (`NUMERIC`/`CATEGORIZATION`/`HOTSPOT`/`CODE_OUTPUT`, Dozenten-Review-Workflow, QTI/Anki-Export) —
+  bewusst nicht Teil dieser Änderung.
